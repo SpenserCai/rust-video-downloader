@@ -36,7 +36,7 @@
 - `rvd-{version}-x86_64-pc-windows-msvc.zip`
 
 **Linux:**
-- `rvd-{version}-x86_64-unknown-linux-gnu.tar.gz` (x86_64)
+- `rvd-{version}-x86_64-unknown-linux-musl.tar.gz` (x86_64, static)
 
 **macOS:**
 - `rvd-{version}-x86_64-apple-darwin.tar.gz` (Intel)
@@ -110,7 +110,7 @@
 
 - macOS: 需要在 macOS runner 上构建
 - Windows: 使用 MSVC 工具链
-- Linux: 使用 GNU 工具链
+- Linux: 使用 musl 静态编译，确保跨发行版兼容性
 
 ## 手动发布（备用方案）
 
@@ -119,7 +119,7 @@
 ```bash
 # 构建所有平台（需要相应的工具链）
 cargo build --release --target x86_64-pc-windows-msvc
-cargo build --release --target x86_64-unknown-linux-gnu
+cargo build --release --target x86_64-unknown-linux-musl
 cargo build --release --target x86_64-apple-darwin
 cargo build --release --target aarch64-apple-darwin
 
@@ -128,12 +128,36 @@ cargo build --release --target aarch64-apple-darwin
 zip rvd-v0.1.0-x86_64-pc-windows-msvc.zip target/x86_64-pc-windows-msvc/release/rvd.exe
 
 # Linux/macOS
-tar czf rvd-v0.1.0-x86_64-unknown-linux-gnu.tar.gz -C target/x86_64-unknown-linux-gnu/release rvd
+tar czf rvd-v0.1.0-x86_64-unknown-linux-musl.tar.gz -C target/x86_64-unknown-linux-musl/release rvd
 
 # 生成校验和
 sha256sum rvd-*.{zip,tar.gz} > SHA256SUMS
 
 # 手动创建 GitHub Release 并上传文件
+```
+
+## Linux 静态编译说明
+
+本项目使用 **musl** 进行 Linux 静态编译，而不是 glibc 动态链接。这样做的好处：
+
+- ✅ **完全可移植**: 可以在任何 x86_64 Linux 发行版上运行
+- ✅ **无依赖问题**: 不会出现 `GLIBC_X.XX not found` 错误
+- ✅ **单一二进制**: 不需要安装额外的运行时库
+- ✅ **跨发行版兼容**: 在 Ubuntu、Debian、CentOS、Alpine 等系统上都能运行
+
+如果需要在本地构建 musl 版本：
+
+```bash
+# 安装 musl 工具
+sudo apt-get install musl-tools  # Ubuntu/Debian
+# 或
+brew install filosottile/musl-cross/musl-cross  # macOS
+
+# 添加 musl 目标
+rustup target add x86_64-unknown-linux-musl
+
+# 构建
+cargo build --release --target x86_64-unknown-linux-musl
 ```
 
 ## 注意事项
@@ -143,3 +167,4 @@ sha256sum rvd-*.{zip,tar.gz} > SHA256SUMS
 3. **文档更新**: 确保文档与代码同步
 4. **向后兼容**: 尽量保持 API 的向后兼容性
 5. **安全性**: 不要在 Release 说明中包含敏感信息
+6. **静态编译**: Linux 版本使用 musl 静态编译，确保最大兼容性
