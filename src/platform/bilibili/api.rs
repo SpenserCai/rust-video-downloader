@@ -240,8 +240,10 @@ pub struct FavoriteUgc {
 #[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct SpaceVideoData {
-    pub list: SpaceVideoList,
-    pub page: SpaceVideoPage,
+    #[serde(default)]
+    pub list: Option<SpaceVideoList>,
+    #[serde(default)]
+    pub page: Option<SpaceVideoPage>,
 }
 
 #[allow(dead_code)]

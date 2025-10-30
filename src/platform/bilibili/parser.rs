@@ -800,14 +800,22 @@ pub async fn fetch_space_videos(
         .data
         .ok_or_else(|| DownloaderError::Parse("No space video data".to_string()))?;
 
-    let total_count = data.page.count;
+    let page_info = data.page.ok_or_else(|| {
+        DownloaderError::Parse("No page info in response (may need authentication or WBI signature)".to_string())
+    })?;
+
+    let total_count = page_info.count;
     let total_pages = (total_count as f64 / page_size as f64).ceil() as u32;
 
     // 处理第一页的视频
-    for item in data.list.vlist {
-        // 获取详细视频信息（包括分P信息）
-        let video_info = fetch_video_info_by_aid(client, &item.aid.to_string(), auth).await?;
-        all_videos.push(video_info);
+    if let Some(list) = data.list {
+        for item in list.vlist {
+            // 获取详细视频信息（包括分P信息）
+            let video_info = fetch_video_info_by_aid(client, &item.aid.to_string(), auth).await?;
+            all_videos.push(video_info);
+        }
+    } else {
+        return Err(DownloaderError::Parse("No video list in response".to_string()));
     }
 
     // 获取剩余页面
@@ -823,9 +831,11 @@ pub async fn fetch_space_videos(
             .map_err(|e| DownloaderError::Parse(format!("Failed to parse space videos: {}", e)))?;
 
         if let Some(data) = api_response.data {
-            for item in data.list.vlist {
-                let video_info = fetch_video_info_by_aid(client, &item.aid.to_string(), auth).await?;
-                all_videos.push(video_info);
+            if let Some(list) = data.list {
+                for item in list.vlist {
+                    let video_info = fetch_video_info_by_aid(client, &item.aid.to_string(), auth).await?;
+                    all_videos.push(video_info);
+                }
             }
         }
     }
