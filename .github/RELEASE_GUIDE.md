@@ -138,12 +138,19 @@ sha256sum rvd-*.{zip,tar.gz} > SHA256SUMS
 
 ## Linux 静态编译说明
 
-本项目使用 **musl** 进行 Linux 静态编译，而不是 glibc 动态链接。这样做的好处：
+本项目使用 **musl** 进行 Linux 静态编译，并使用 **rustls** 替代 OpenSSL。这样做的好处：
 
 - ✅ **完全可移植**: 可以在任何 x86_64 Linux 发行版上运行
-- ✅ **无依赖问题**: 不会出现 `GLIBC_X.XX not found` 错误
+- ✅ **无依赖问题**: 不会出现 `GLIBC_X.XX not found` 或 OpenSSL 版本问题
 - ✅ **单一二进制**: 不需要安装额外的运行时库
 - ✅ **跨发行版兼容**: 在 Ubuntu、Debian、CentOS、Alpine 等系统上都能运行
+- ✅ **纯 Rust 实现**: rustls 是纯 Rust 的 TLS 实现，更安全且易于静态编译
+
+### 技术细节
+
+- **TLS 库**: 使用 `rustls` 而不是 OpenSSL
+- **C 运行时**: 使用 `musl` 而不是 glibc
+- **链接方式**: 完全静态链接
 
 如果需要在本地构建 musl 版本：
 
@@ -159,6 +166,13 @@ rustup target add x86_64-unknown-linux-musl
 # 构建
 cargo build --release --target x86_64-unknown-linux-musl
 ```
+
+### 为什么使用 rustls？
+
+- 避免 OpenSSL 的复杂依赖和版本问题
+- 更好的静态编译支持
+- 纯 Rust 实现，更安全
+- 许多现代 Rust 项目的标准选择
 
 ## 注意事项
 
