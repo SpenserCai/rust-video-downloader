@@ -75,3 +75,10 @@ pub struct DownloadedComponents {
     pub subtitle_paths: Vec<std::path::PathBuf>,
     pub cover_path: Option<std::path::PathBuf>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Chapter {
+    pub title: String,
+    pub start: u64, // 开始时间（秒）
+    pub end: u64,   // 结束时间（秒）
+}

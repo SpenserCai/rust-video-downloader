@@ -45,6 +45,11 @@ fn create_test_cli(url: &str, output_name: &str, skip_mux: bool) -> Cli {
         verbose: true,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     }
 }
 
@@ -70,6 +75,11 @@ fn create_test_cli_with_config(url: &str, output_name: &str, skip_mux: bool, con
         verbose: true,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     }
 }
 
@@ -235,6 +245,11 @@ async fn test_e2e_download_with_config() {
         verbose: true,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let config = load_test_config();
@@ -297,6 +312,11 @@ async fn test_e2e_multi_page_download() {
         verbose: true,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let config = load_test_config();
@@ -398,6 +418,11 @@ async fn test_e2e_quality_fallback() {
         verbose: true,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let config = load_test_config();
@@ -460,6 +485,11 @@ async fn test_e2e_high_quality_with_auth() {
         verbose: true,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let config = load_test_config();

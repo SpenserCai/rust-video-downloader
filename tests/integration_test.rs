@@ -192,6 +192,11 @@ fn test_orchestrator_creation() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let config = Config::default();
@@ -265,6 +270,11 @@ async fn test_info_only_mode() {
         verbose: false,
         info_only: true, // 仅显示信息，不下载
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let config = Config::default();
@@ -315,6 +325,11 @@ async fn test_multi_page_selection() {
                 verbose: false,
                 info_only: true,
                 ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
             };
 
             let parsed_pages = cli.parse_pages();

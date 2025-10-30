@@ -69,6 +69,26 @@ pub struct Cli {
     /// Path to ffmpeg binary
     #[arg(long)]
     pub ffmpeg_path: Option<PathBuf>,
+
+    /// Use TV API mode (for higher quality streams)
+    #[arg(long)]
+    pub use_tv_api: bool,
+
+    /// Use APP API mode (for Dolby audio support)
+    #[arg(long)]
+    pub use_app_api: bool,
+
+    /// Use International API mode
+    #[arg(long)]
+    pub use_intl_api: bool,
+
+    /// Download danmaku (bullet comments)
+    #[arg(long)]
+    pub download_danmaku: bool,
+
+    /// Danmaku format (xml or ass)
+    #[arg(long, default_value = "ass")]
+    pub danmaku_format: String,
 }
 
 impl Cli {
@@ -126,6 +146,32 @@ impl Cli {
             }
         } else {
             None
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_api_mode(&self) -> crate::platform::bilibili::ApiMode {
+        use crate::platform::bilibili::ApiMode;
+        
+        if self.use_tv_api {
+            ApiMode::TV
+        } else if self.use_app_api {
+            ApiMode::App
+        } else if self.use_intl_api {
+            ApiMode::International
+        } else {
+            ApiMode::Web
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn get_danmaku_format(&self) -> crate::core::danmaku::DanmakuFormat {
+        use crate::core::danmaku::DanmakuFormat;
+        
+        match self.danmaku_format.to_lowercase().as_str() {
+            "xml" => DanmakuFormat::Xml,
+            "ass" => DanmakuFormat::Ass,
+            _ => DanmakuFormat::Ass,
         }
     }
 }

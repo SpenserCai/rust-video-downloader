@@ -20,6 +20,11 @@ fn test_parse_quality_priority_default() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let quality = cli.parse_quality_priority();
@@ -45,6 +50,11 @@ fn test_parse_quality_priority_custom() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let quality = cli.parse_quality_priority();
@@ -70,6 +80,11 @@ fn test_parse_codec_priority_default() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let codec = cli.parse_codec_priority();
@@ -95,6 +110,11 @@ fn test_parse_codec_priority_custom() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let codec = cli.parse_codec_priority();
@@ -120,6 +140,11 @@ fn test_parse_pages_none() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -145,6 +170,11 @@ fn test_parse_pages_all() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -170,6 +200,11 @@ fn test_parse_pages_single() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -195,6 +230,11 @@ fn test_parse_pages_multiple() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -220,6 +260,11 @@ fn test_parse_pages_range() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -245,6 +290,11 @@ fn test_parse_pages_mixed() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();

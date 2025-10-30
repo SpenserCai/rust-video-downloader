@@ -47,6 +47,17 @@ impl Muxer {
         output: &Path,
         subtitles: &[PathBuf],
     ) -> Result<()> {
+        self.mux_with_chapters(video, audio, output, subtitles, &[]).await
+    }
+
+    pub async fn mux_with_chapters(
+        &self,
+        video: &Path,
+        audio: &Path,
+        output: &Path,
+        subtitles: &[PathBuf],
+        chapters: &[crate::types::Chapter],
+    ) -> Result<()> {
         tracing::info!("Muxing video and audio to {:?}", output);
 
         let mut cmd = Command::new(&self.ffmpeg_path);
@@ -58,12 +69,27 @@ impl Muxer {
             cmd.arg("-i").arg(subtitle);
         }
 
+        // 如果有章节信息，创建章节文件
+        let chapter_file = if !chapters.is_empty() {
+            let chapter_path = output.with_extension("chapters.txt");
+            self.create_chapter_file(&chapter_path, chapters)?;
+            Some(chapter_path)
+        } else {
+            None
+        };
+
         // Copy codecs (no re-encoding)
         cmd.arg("-c:v").arg("copy");
         cmd.arg("-c:a").arg("copy");
 
         if !subtitles.is_empty() {
             cmd.arg("-c:s").arg("mov_text");
+        }
+
+        // 添加章节元数据
+        if let Some(ref chapter_path) = chapter_file {
+            cmd.arg("-i").arg(chapter_path);
+            cmd.arg("-map_metadata").arg(format!("{}", 2 + subtitles.len()));
         }
 
         // Overwrite output file
@@ -74,12 +100,17 @@ impl Muxer {
 
         tracing::debug!("FFmpeg command: {:?}", cmd);
 
-        let output = cmd
+        let output_result = cmd
             .output()
             .map_err(|e| DownloaderError::MuxFailed(format!("Failed to execute ffmpeg: {}", e)))?;
 
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
+        // 清理章节文件
+        if let Some(chapter_path) = chapter_file {
+            let _ = std::fs::remove_file(chapter_path);
+        }
+
+        if !output_result.status.success() {
+            let stderr = String::from_utf8_lossy(&output_result.stderr);
             return Err(DownloaderError::MuxFailed(format!(
                 "FFmpeg failed: {}",
                 stderr
@@ -87,6 +118,23 @@ impl Muxer {
         }
 
         tracing::info!("Muxing completed successfully");
+        Ok(())
+    }
+
+    fn create_chapter_file(&self, path: &Path, chapters: &[crate::types::Chapter]) -> Result<()> {
+        let mut content = String::from(";FFMETADATA1\n");
+
+        for chapter in chapters {
+            content.push_str("[CHAPTER]\n");
+            content.push_str("TIMEBASE=1/1\n");
+            content.push_str(&format!("START={}\n", chapter.start));
+            content.push_str(&format!("END={}\n", chapter.end));
+            content.push_str(&format!("title={}\n", chapter.title));
+        }
+
+        std::fs::write(path, content)
+            .map_err(DownloaderError::Io)?;
+
         Ok(())
     }
 
