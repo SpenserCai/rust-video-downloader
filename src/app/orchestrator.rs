@@ -324,7 +324,7 @@ impl Orchestrator {
         }
 
         // Download danmaku
-        if cli.download_danmaku {
+        let danmaku_temp_path = if cli.download_danmaku {
             let danmaku_format = cli.get_danmaku_format();
             let danmaku_ext = match danmaku_format {
                 danmaku::DanmakuFormat::Xml => "xml",
@@ -332,7 +332,7 @@ impl Orchestrator {
             };
             let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
             
-            if let Ok(()) = danmaku::download_danmaku(
+            match danmaku::download_danmaku(
                 &self.http_client,
                 &page.cid,
                 &danmaku_path,
@@ -340,9 +340,18 @@ impl Orchestrator {
             )
             .await
             {
-                println!("  ✓ Danmaku downloaded");
+                Ok(()) => {
+                    println!("  ✓ Danmaku downloaded");
+                    Some(danmaku_path)
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to download danmaku: {}", e);
+                    None
+                }
             }
-        }
+        } else {
+            None
+        };
 
         // Download cover
         let _cover_path = if !cli.skip_cover {
@@ -396,6 +405,20 @@ impl Orchestrator {
                 .mux_with_chapters(&video_path, &audio_path, &output_path, &subtitle_paths, &chapters)
                 .await?;
             println!("  ✓ Muxed to: {}", output_path.display());
+        }
+
+        // Copy danmaku file to output directory (same name as video, different extension)
+        if let Some(danmaku_temp_path) = danmaku_temp_path {
+            if danmaku_temp_path.exists() {
+                let danmaku_ext = danmaku_temp_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("xml");
+                let danmaku_output_path = output_path.with_extension(danmaku_ext);
+                
+                tokio::fs::copy(&danmaku_temp_path, &danmaku_output_path).await?;
+                println!("  ✓ Danmaku saved to: {}", danmaku_output_path.display());
+            }
         }
 
         // Cleanup temp directory
