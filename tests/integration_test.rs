@@ -441,7 +441,10 @@ async fn test_file_naming_template() {
             title: "P1".to_string(),
             cid: "123456".to_string(),
             duration: 300,
+            ep_id: None,
         }],
+        is_bangumi: false,
+        ep_id: None,
     };
 
     // 测试各种模板

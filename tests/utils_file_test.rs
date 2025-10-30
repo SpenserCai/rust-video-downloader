@@ -40,7 +40,10 @@ fn test_parse_template_single_page() {
             title: "P1".to_string(),
             cid: "123456".to_string(),
             duration: 300,
+            ep_id: None,
         }],
+        is_bangumi: false,
+        ep_id: None,
     };
 
     // 测试基本模板
@@ -84,14 +87,18 @@ fn test_parse_template_multi_page() {
                 title: "第一集".to_string(),
                 cid: "123456".to_string(),
                 duration: 300,
+                ep_id: None,
             },
             Page {
                 number: 2,
                 title: "第二集".to_string(),
                 cid: "123457".to_string(),
                 duration: 300,
+                ep_id: None,
             },
         ],
+        is_bangumi: false,
+        ep_id: None,
     };
 
     let page = &video_info.pages[0];
@@ -138,7 +145,10 @@ fn test_get_default_output_path_single_page() {
             title: "P1".to_string(),
             cid: "123456".to_string(),
             duration: 300,
+            ep_id: None,
         }],
+        is_bangumi: false,
+        ep_id: None,
     };
 
     let path = get_default_output_path(&video_info, None);
@@ -163,14 +173,18 @@ fn test_get_default_output_path_multi_page() {
                 title: "第一集".to_string(),
                 cid: "123456".to_string(),
                 duration: 300,
+                ep_id: None,
             },
             Page {
                 number: 2,
                 title: "第二集".to_string(),
                 cid: "123457".to_string(),
                 duration: 300,
+                ep_id: None,
             },
         ],
+        is_bangumi: false,
+        ep_id: None,
     };
 
     let page = &video_info.pages[0];
