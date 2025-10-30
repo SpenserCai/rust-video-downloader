@@ -1,6 +1,6 @@
 [package]
 name = "rvd"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["RVD Contributors"]
 description = "A modular video downloader written in Rust"
@@ -42,6 +42,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Regex
 regex = "1.10"
 
+# Compression (for manual gzip decompression if needed)
+flate2 = "1.0"
+
 # Async trait
 async-trait = "0.1"
 
@@ -56,6 +59,9 @@ dirs = "5.0"
 
 # Interactive prompts
 dialoguer = "0.11"
+
+# Cryptography
+md5 = "0.7"
 
 [dev-dependencies]
 mockito = "1.2"

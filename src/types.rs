@@ -12,6 +12,10 @@ pub struct VideoInfo {
     pub upload_date: String,
     pub cover_url: String,
     pub pages: Vec<Page>,
+    #[serde(default)]
+    pub is_bangumi: bool, // 是否是番剧/课程
+    #[serde(default)]
+    pub ep_id: Option<String>, // 番剧的ep_id（如果是番剧）
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,6 +24,8 @@ pub struct Page {
     pub title: String,
     pub cid: String,
     pub duration: u64,
+    #[serde(default)]
+    pub ep_id: Option<String>, // 番剧的ep_id（如果是番剧的话）
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,4 +80,11 @@ pub struct DownloadedComponents {
     pub audio_path: std::path::PathBuf,
     pub subtitle_paths: Vec<std::path::PathBuf>,
     pub cover_path: Option<std::path::PathBuf>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Chapter {
+    pub title: String,
+    pub start: u64, // 开始时间（秒）
+    pub end: u64,   // 结束时间（秒）
 }

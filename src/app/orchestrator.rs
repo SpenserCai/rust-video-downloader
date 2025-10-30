@@ -1,9 +1,11 @@
 use crate::cli::Cli;
+use crate::core::danmaku;
 use crate::core::downloader::Downloader;
 use crate::core::muxer::Muxer;
 use crate::core::progress::ProgressTracker;
 use crate::core::subtitle;
 use crate::error::{DownloaderError, Result};
+use crate::platform::bilibili::parser;
 use crate::platform::bilibili::selector::select_best_streams;
 use crate::platform::bilibili::BilibiliPlatform;
 use crate::platform::Platform;
@@ -34,7 +36,11 @@ impl Orchestrator {
             }))?);
         let progress = Arc::new(ProgressTracker::new());
 
-        let platforms: Vec<Box<dyn Platform>> = vec![Box::new(BilibiliPlatform::new()?)];
+        // 根据CLI参数选择API模式
+        let api_mode = cli.get_api_mode();
+        let platforms: Vec<Box<dyn Platform>> = vec![
+            Box::new(BilibiliPlatform::with_api_mode(api_mode)?)
+        ];
 
         Ok(Self {
             platforms,
@@ -56,6 +62,14 @@ impl Orchestrator {
         Err(DownloaderError::UnsupportedPlatform(url.to_string()))
     }
 
+    fn is_batch_url(&self, url: &str) -> bool {
+        // Check if URL is a batch download type (favorites, space, medialist, series)
+        url.contains("favlist") 
+            || (url.contains("space.bilibili.com") && !url.contains("/video/"))
+            || url.contains("medialist")
+            || url.contains("seriesdetail")
+    }
+
     pub async fn run(&self, cli: Cli) -> Result<()> {
         tracing::info!("Starting download for URL: {}", cli.url);
 
@@ -66,7 +80,63 @@ impl Orchestrator {
         // Build auth
         let auth = self.build_auth(&cli);
 
-        // Parse video info
+        // Check if this is a batch download URL (for bilibili)
+        let is_batch = self.is_batch_url(&cli.url);
+        
+        if is_batch {
+            // Handle batch download
+            if let Some(bilibili) = platform.as_any().downcast_ref::<BilibiliPlatform>() {
+                let videos = bilibili.parse_video_batch(&cli.url, auth.as_ref()).await?;
+                
+                if videos.is_empty() {
+                    return Err(DownloaderError::Parse("No videos found in batch".to_string()));
+                }
+                
+                println!("\n📦 Batch download: {} video(s) found", videos.len());
+                
+                if cli.info_only {
+                    for (idx, video) in videos.iter().enumerate() {
+                        println!("\n[{}/{}]", idx + 1, videos.len());
+                        self.display_video_info(video);
+                    }
+                    return Ok(());
+                }
+                
+                // Build stream preferences
+                let preferences = StreamPreferences {
+                    quality_priority: cli.parse_quality_priority(),
+                    codec_priority: cli.parse_codec_priority(),
+                };
+                
+                // Download each video in the batch
+                for (idx, video_info) in videos.iter().enumerate() {
+                    println!("\n[{}/{}] Processing: {}", idx + 1, videos.len(), video_info.title);
+                    
+                    // Determine which pages to download
+                    let pages_to_download = self.select_pages(video_info, &cli)?;
+                    
+                    // Download each page
+                    for page in pages_to_download {
+                        self.process_page(
+                            video_info,
+                            &page,
+                            &preferences,
+                            &cli,
+                            platform,
+                            auth.as_ref(),
+                        )
+                        .await?;
+                    }
+                }
+                
+                self.progress.finish_all();
+                println!("\n✓ All {} video(s) downloaded successfully!", videos.len());
+                
+                return Ok(());
+            }
+        }
+
+        // Single video download (original logic)
         let video_info = platform.parse_video(&cli.url, auth.as_ref()).await?;
 
         // Display video info
@@ -133,8 +203,10 @@ impl Orchestrator {
         println!("  Uploader: {}", video_info.uploader);
         println!("  Pages: {}", video_info.pages.len());
         if !video_info.description.is_empty() {
-            let desc = if video_info.description.len() > 100 {
-                format!("{}...", &video_info.description[..100])
+            // 安全地截断字符串，考虑 UTF-8 字符边界
+            let desc = if video_info.description.chars().count() > 100 {
+                let truncated: String = video_info.description.chars().take(100).collect();
+                format!("{}...", truncated)
             } else {
                 video_info.description.clone()
             };
@@ -237,10 +309,56 @@ impl Orchestrator {
     ) -> Result<()> {
         println!("\n📥 Downloading: P{} - {}", page.number, page.title);
 
+        // Get chapters early (before downloading)
+        let chapters = match parser::fetch_chapters(
+            &self.http_client,
+            &video_info.aid.to_string(),
+            &page.cid,
+        )
+        .await
+        {
+            Ok(chapters) => {
+                if !chapters.is_empty() {
+                    tracing::debug!("Found {} chapter(s)", chapters.len());
+                }
+                chapters
+            }
+            Err(e) => {
+                tracing::debug!("Failed to fetch chapters: {}", e);
+                Vec::new()
+            }
+        };
+
         // Get streams (use aid for bilibili API)
-        let streams = platform
-            .get_streams(&video_info.aid.to_string(), &page.cid, auth)
-            .await?;
+        let streams = if video_info.is_bangumi {
+            // 番剧需要使用特殊的API
+            if let Some(platform_bilibili) = platform.as_any().downcast_ref::<crate::platform::bilibili::BilibiliPlatform>() {
+                if let Some(ref ep_id) = page.ep_id {
+                    // 使用page的ep_id（每个episode有自己的ep_id）
+                    platform_bilibili
+                        .get_bangumi_streams(&video_info.aid.to_string(), &page.cid, ep_id, auth)
+                        .await?
+                } else if let Some(ref ep_id) = video_info.ep_id {
+                    // 如果page没有ep_id，使用video_info的ep_id
+                    platform_bilibili
+                        .get_bangumi_streams(&video_info.aid.to_string(), &page.cid, ep_id, auth)
+                        .await?
+                } else {
+                    // 如果都没有ep_id，尝试使用普通API
+                    platform
+                        .get_streams(&video_info.aid.to_string(), &page.cid, auth)
+                        .await?
+                }
+            } else {
+                platform
+                    .get_streams(&video_info.aid.to_string(), &page.cid, auth)
+                    .await?
+            }
+        } else {
+            platform
+                .get_streams(&video_info.aid.to_string(), &page.cid, auth)
+                .await?
+        };
 
         if streams.is_empty() {
             return Err(DownloaderError::DownloadFailed(
@@ -297,6 +415,36 @@ impl Orchestrator {
             }
         }
 
+        // Download danmaku
+        let danmaku_temp_path = if cli.download_danmaku {
+            let danmaku_format = cli.get_danmaku_format();
+            let danmaku_ext = match danmaku_format {
+                danmaku::DanmakuFormat::Xml => "xml",
+                danmaku::DanmakuFormat::Ass => "ass",
+            };
+            let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
+            
+            match danmaku::download_danmaku(
+                &self.http_client,
+                &page.cid,
+                &danmaku_path,
+                danmaku_format,
+            )
+            .await
+            {
+                Ok(()) => {
+                    println!("  ✓ Danmaku downloaded");
+                    Some(danmaku_path)
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to download danmaku: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         // Download cover
         let _cover_path = if !cli.skip_cover {
             let cover_url = platform.get_cover(video_info);
@@ -318,13 +466,26 @@ impl Orchestrator {
 
         // Determine output path
         let output_path = if let Some(ref output) = cli.output {
-            PathBuf::from(file::parse_template(
+            let parsed = file::parse_template(
                 output,
                 video_info,
                 Some(page),
                 &video_stream.quality,
                 &video_stream.codec,
-            ))
+            );
+            let path = PathBuf::from(&parsed);
+            
+            // If the path is a directory or doesn't have an extension, add a filename
+            if path.is_dir() || path.extension().is_none() {
+                let filename = if video_info.pages.len() > 1 {
+                    format!("P{:02}_{}.mp4", page.number, file::sanitize_filename(&page.title))
+                } else {
+                    format!("{}.mp4", file::sanitize_filename(&video_info.title))
+                };
+                path.join(filename)
+            } else {
+                path
+            }
         } else {
             file::get_default_output_path(video_info, Some(page))
         };
@@ -343,12 +504,26 @@ impl Orchestrator {
             tokio::fs::copy(&audio_path, &audio_out).await?;
             println!("  ✓ Files saved (muxing skipped)");
         } else {
-            // Mux video and audio
+            // Mux video and audio with chapters
             println!("  🔄 Muxing...");
             self.muxer
-                .mux(&video_path, &audio_path, &output_path, &subtitle_paths)
+                .mux_with_chapters(&video_path, &audio_path, &output_path, &subtitle_paths, &chapters)
                 .await?;
             println!("  ✓ Muxed to: {}", output_path.display());
+        }
+
+        // Copy danmaku file to output directory (same name as video, different extension)
+        if let Some(danmaku_temp_path) = danmaku_temp_path {
+            if danmaku_temp_path.exists() {
+                let danmaku_ext = danmaku_temp_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("xml");
+                let danmaku_output_path = output_path.with_extension(danmaku_ext);
+                
+                tokio::fs::copy(&danmaku_temp_path, &danmaku_output_path).await?;
+                println!("  ✓ Danmaku saved to: {}", danmaku_output_path.display());
+            }
         }
 
         // Cleanup temp directory

@@ -184,3 +184,85 @@ fn test_select_best_streams_no_audio() {
     let result = select_best_streams(&streams, &preferences);
     assert!(result.is_err());
 }
+
+// 新增：URL解析扩展测试
+#[test]
+fn test_can_handle_bangumi_urls() {
+    let platform = BilibiliPlatform::new().unwrap();
+    
+    // 测试番剧ep链接
+    assert!(platform.can_handle("https://www.bilibili.com/bangumi/play/ep123456"));
+    assert!(platform.can_handle("ep123456"));
+    
+    // 测试番剧ss链接
+    assert!(platform.can_handle("https://www.bilibili.com/bangumi/play/ss12345"));
+    assert!(platform.can_handle("ss12345"));
+}
+
+#[test]
+fn test_can_handle_cheese_urls() {
+    let platform = BilibiliPlatform::new().unwrap();
+    
+    assert!(platform.can_handle("https://www.bilibili.com/cheese/play/ep123456"));
+}
+
+#[test]
+fn test_can_handle_favorite_list_urls() {
+    let platform = BilibiliPlatform::new().unwrap();
+    
+    assert!(platform.can_handle("https://space.bilibili.com/123456/favlist?fid=789"));
+}
+
+#[test]
+fn test_can_handle_space_video_urls() {
+    let platform = BilibiliPlatform::new().unwrap();
+    
+    assert!(platform.can_handle("https://space.bilibili.com/123456"));
+}
+
+#[test]
+fn test_can_handle_media_list_urls() {
+    let platform = BilibiliPlatform::new().unwrap();
+    
+    assert!(platform.can_handle("https://www.bilibili.com/medialist/play/ml123456"));
+}
+
+#[test]
+fn test_can_handle_series_list_urls() {
+    let platform = BilibiliPlatform::new().unwrap();
+    
+    assert!(platform.can_handle("https://space.bilibili.com/123456/channel/seriesdetail?sid=789"));
+}
+
+// API模式测试
+#[test]
+fn test_api_mode_web() {
+    use rvd::platform::bilibili::ApiMode;
+    let platform = BilibiliPlatform::with_api_mode(ApiMode::Web).unwrap();
+    // 验证平台创建成功
+    assert!(platform.can_handle("https://www.bilibili.com/video/BV1xx411c7mD"));
+}
+
+#[test]
+fn test_api_mode_tv() {
+    use rvd::platform::bilibili::ApiMode;
+    let platform = BilibiliPlatform::with_api_mode(ApiMode::TV).unwrap();
+    // 验证平台创建成功
+    assert!(platform.can_handle("https://www.bilibili.com/video/BV1xx411c7mD"));
+}
+
+#[test]
+fn test_api_mode_app() {
+    use rvd::platform::bilibili::ApiMode;
+    let platform = BilibiliPlatform::with_api_mode(ApiMode::App).unwrap();
+    // 验证平台创建成功
+    assert!(platform.can_handle("https://www.bilibili.com/video/BV1xx411c7mD"));
+}
+
+#[test]
+fn test_api_mode_international() {
+    use rvd::platform::bilibili::ApiMode;
+    let platform = BilibiliPlatform::with_api_mode(ApiMode::International).unwrap();
+    // 验证平台创建成功
+    assert!(platform.can_handle("https://www.bilibili.com/video/BV1xx411c7mD"));
+}

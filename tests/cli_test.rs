@@ -20,6 +20,11 @@ fn test_parse_quality_priority_default() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let quality = cli.parse_quality_priority();
@@ -45,6 +50,11 @@ fn test_parse_quality_priority_custom() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let quality = cli.parse_quality_priority();
@@ -70,6 +80,11 @@ fn test_parse_codec_priority_default() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let codec = cli.parse_codec_priority();
@@ -95,6 +110,11 @@ fn test_parse_codec_priority_custom() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let codec = cli.parse_codec_priority();
@@ -120,6 +140,11 @@ fn test_parse_pages_none() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -145,6 +170,11 @@ fn test_parse_pages_all() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -170,6 +200,11 @@ fn test_parse_pages_single() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -195,6 +230,11 @@ fn test_parse_pages_multiple() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -220,6 +260,11 @@ fn test_parse_pages_range() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
@@ -245,8 +290,229 @@ fn test_parse_pages_mixed() {
         verbose: false,
         info_only: false,
         ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
     };
 
     let pages = cli.parse_pages();
     assert_eq!(pages, Some(vec![1, 3, 4, 5, 8]));
+}
+
+// 新增：API模式标志测试
+#[test]
+fn test_cli_api_mode_tv() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: false,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: true,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
+    };
+    
+    assert!(cli.use_tv_api);
+    let api_mode = cli.get_api_mode();
+    assert!(matches!(api_mode, rvd::platform::bilibili::ApiMode::TV));
+}
+
+#[test]
+fn test_cli_api_mode_app() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: false,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: true,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
+    };
+    
+    assert!(cli.use_app_api);
+    let api_mode = cli.get_api_mode();
+    assert!(matches!(api_mode, rvd::platform::bilibili::ApiMode::App));
+}
+
+#[test]
+fn test_cli_api_mode_international() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: false,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: true,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
+    };
+    
+    assert!(cli.use_intl_api);
+    let api_mode = cli.get_api_mode();
+    assert!(matches!(api_mode, rvd::platform::bilibili::ApiMode::International));
+}
+
+// 弹幕标志测试
+#[test]
+fn test_cli_danmaku_download() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: false,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: true,
+        danmaku_format: "ass".to_string(),
+    };
+    
+    assert!(cli.download_danmaku);
+}
+
+#[test]
+fn test_cli_danmaku_format_xml() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: false,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: true,
+        danmaku_format: "xml".to_string(),
+    };
+    
+    assert_eq!(cli.danmaku_format, "xml");
+    let format = cli.get_danmaku_format();
+    assert!(matches!(format, rvd::core::danmaku::DanmakuFormat::Xml));
+}
+
+#[test]
+fn test_cli_danmaku_format_ass() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: false,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: true,
+        danmaku_format: "ass".to_string(),
+    };
+    
+    assert_eq!(cli.danmaku_format, "ass");
+    let format = cli.get_danmaku_format();
+    assert!(matches!(format, rvd::core::danmaku::DanmakuFormat::Ass));
+}
+
+// 交互式模式测试
+#[test]
+fn test_cli_interactive_flag() {
+    let cli = Cli {
+        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        quality: None,
+        codec: None,
+        output: None,
+        cookie: None,
+        access_token: None,
+        pages: None,
+        threads: 4,
+        skip_subtitle: false,
+        skip_cover: false,
+        skip_mux: false,
+        interactive: true,
+        config_file: None,
+        verbose: false,
+        info_only: false,
+        ffmpeg_path: None,
+        use_tv_api: false,
+        use_app_api: false,
+        use_intl_api: false,
+        download_danmaku: false,
+        danmaku_format: "ass".to_string(),
+    };
+    
+    assert!(cli.interactive);
 }

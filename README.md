@@ -21,16 +21,16 @@
 - ✅ 详细的下载进度显示
 - ✅ 模块化、可扩展的架构
 - ✅ 支持 AVC/HEVC/AV1 编码
+- ✅ 番剧下载（ep/ss 链接）
+- ✅ 课程下载（cheese 链接）
+- ✅ 批量下载（收藏夹、UP主空间、合集、系列）
+- ✅ 弹幕下载（XML/ASS 格式）
+- ✅ 章节信息提取和嵌入
+- ✅ TV/APP API 支持（无水印片源）
+- ✅ 国际版 API 支持
 
 ### 计划支持功能
 
-- ⬜ 番剧下载（ep/ss 链接）
-- ⬜ 课程下载（cheese 链接）
-- ⬜ 批量下载（收藏夹、UP主空间、合集、系列）
-- ⬜ 弹幕下载（XML/ASS 格式）
-- ⬜ 章节信息提取和嵌入
-- ⬜ TV/APP API 支持（无水印片源）
-- ⬜ 国际版 API 支持
 - ⬜ 8K/HDR/杜比视界/杜比全景声支持
 - ⬜ Aria2c 下载支持
 - ⬜ MP4Box 混流支持
@@ -265,6 +265,87 @@ ffmpeg = "/usr/local/bin/ffmpeg"
 
 配置文件中的设置会被命令行参数覆盖。
 
+### 下载番剧和课程
+
+下载番剧（通过 ep 或 ss 链接）：
+
+```bash
+# 通过 ep 链接下载
+rvd "https://www.bilibili.com/bangumi/play/ep123456"
+
+# 通过 ss 链接下载整季
+rvd "https://www.bilibili.com/bangumi/play/ss12345"
+
+# 下载特定集数
+rvd ep123456 -p "1,2,3"
+```
+
+下载课程：
+
+```bash
+rvd "https://www.bilibili.com/cheese/play/ep123456"
+```
+
+### 批量下载
+
+下载收藏夹中的所有视频：
+
+```bash
+rvd "https://space.bilibili.com/{mid}/favlist?fid={fav_id}"
+```
+
+下载UP主空间的所有视频：
+
+```bash
+rvd "https://space.bilibili.com/{mid}"
+```
+
+下载合集：
+
+```bash
+rvd "https://www.bilibili.com/medialist/play/ml{media_id}"
+```
+
+下载系列：
+
+```bash
+rvd "https://space.bilibili.com/{mid}/channel/seriesdetail?sid={series_id}"
+```
+
+### 下载弹幕
+
+下载 XML 格式弹幕：
+
+```bash
+rvd BV1xx411c7mD --download-danmaku --danmaku-format xml
+```
+
+下载 ASS 格式弹幕（默认）：
+
+```bash
+rvd BV1xx411c7mD --download-danmaku
+```
+
+### 使用不同 API 模式
+
+使用 TV API（获取无水印片源）：
+
+```bash
+rvd BV1xx411c7mD --use-tv-api
+```
+
+使用 APP API：
+
+```bash
+rvd BV1xx411c7mD --use-app-api
+```
+
+使用国际版 API：
+
+```bash
+rvd BV1xx411c7mD --use-intl-api
+```
+
 ## 命令行参数
 
 ```
@@ -272,8 +353,11 @@ Usage: rvd [OPTIONS] <URL>
 
 Arguments:
   <URL>
-          视频 URL（支持 bilibili BV/av 号）
-          示例: BV1xx411c7mD, av170001, https://www.bilibili.com/video/BV1xx411c7mD
+          视频 URL（支持 bilibili BV/av/ep/ss/cheese 号及批量链接）
+          示例: BV1xx411c7mD, av170001, ep123456, ss12345
+                https://www.bilibili.com/video/BV1xx411c7mD
+                https://www.bilibili.com/bangumi/play/ep123456
+                https://space.bilibili.com/{mid}
 
 Options:
   -q, --quality <QUALITY>
@@ -293,7 +377,7 @@ Options:
                    <quality>, <codec>, <uploader>, <uploaderMid>, <bvid>, <cid>, <date>
 
   -p, --pages <PAGES>
-          选择特定分P
+          选择特定分P或集数
           示例: "1" (单个), "1,2,5" (多个), "1-5" (范围), "ALL" (全部)
 
   -t, --threads <THREADS>
@@ -307,7 +391,7 @@ Options:
           用于认证的 Cookie 字符串（用于下载会员内容）
 
       --access-token <ACCESS_TOKEN>
-          用于认证的 Access Token（未来支持 TV/APP API）
+          用于认证的 Access Token（用于 TV/APP API）
 
       --skip-subtitle
           跳过字幕下载
@@ -326,6 +410,22 @@ Options:
 
       --ffmpeg-path <FFMPEG_PATH>
           指定 FFmpeg 可执行文件路径
+
+      --use-tv-api
+          使用 TV API 模式（获取无水印片源）
+
+      --use-app-api
+          使用 APP API 模式（支持杜比音频）
+
+      --use-intl-api
+          使用国际版 API 模式
+
+      --download-danmaku
+          下载弹幕文件
+
+      --danmaku-format <FORMAT>
+          弹幕格式（xml 或 ass）
+          [default: ass]
 
   -v, --verbose
           启用详细日志输出
@@ -478,20 +578,26 @@ A: 是的，Cookie 有效期通常为几个月。过期后需要重新获取。
 
 ## 路线图
 
-### v0.2.0（计划中）
-- [ ] 番剧和课程下载支持
-- [ ] 批量下载功能
-- [ ] 弹幕下载
+### v0.2.0（已完成）✅
+- [x] 番剧和课程下载支持
+- [x] 批量下载功能（收藏夹、UP主空间、合集、系列）
+- [x] 弹幕下载（XML/ASS 格式）
+- [x] TV/APP/国际版 API 支持
+- [x] 章节信息提取和嵌入
 
 ### v0.3.0（计划中）
-- [ ] TV/APP API 支持
-- [ ] 章节信息嵌入
-- [ ] 高级编码支持（杜比、HDR）
+- [ ] 8K/HDR/杜比视界/杜比全景声完整支持
+- [ ] Aria2c 下载引擎支持
+- [ ] MP4Box 混流支持
+- [ ] 二维码登录
+- [ ] 性能优化和内存使用改进
 
 ### v1.0.0（长期目标）
 - [ ] 完整的 BBDown 功能对等
-- [ ] 多平台支持（YouTube 等）
+- [ ] 多平台支持（YouTube、爱奇艺等）
 - [ ] GUI 界面
+- [ ] 下载队列管理
+- [ ] 断点续传支持
 
 ## 贡献
 
