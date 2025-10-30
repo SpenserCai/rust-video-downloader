@@ -35,3 +35,5 @@ ref/
 PROJECT_SUMMARY.md
 STATS.md
 QUICKSTART.md
+
+tests/test_data/
