@@ -1,0 +1,36 @@
+# RVD 配置文件示例
+# 将此文件复制为 rvd.toml 并根据需要修改
+
+# 默认清晰度优先级
+# 可选值: "8K 超高清", "杜比视界", "HDR 真彩", "4K 超清", "1080P 60帧", 
+#         "1080P 高码率", "1080P 高清", "720P 60帧", "720P 高清", "480P 清晰", "360P 流畅"
+default_quality = ["1080P 高清", "720P 高清", "480P 清晰"]
+
+# 默认编码优先级
+# 可选值: "hevc" (H.265), "avc" (H.264), "av1"
+default_codec = ["avc", "hevc", "av1"]
+
+# 下载线程数（建议 4-8）
+thread_count = 4
+
+# 单P视频输出文件名模板
+# 可用变量: <videoTitle>, <quality>, <codec>, <uploader>, <bvid>, <date>
+output_template = "<videoTitle>"
+
+# 多P视频输出文件名模板
+# 可用变量: 同上 + <pageNumber>, <pageNumberWithZero>, <pageTitle>, <cid>
+multi_output_template = "<videoTitle>/P<pageNumberWithZero>_<pageTitle>"
+
+# 认证信息（可选）
+[auth]
+# 从浏览器获取的 SESSDATA Cookie
+# cookie = "SESSDATA=your_sessdata_here"
+
+# TV/APP 接口的 Access Token（可选）
+# access_token = ""
+
+# 外部工具路径（可选）
+[paths]
+# FFmpeg 可执行文件路径
+# 如果 ffmpeg 在 PATH 中，可以不设置
+# ffmpeg = "/usr/local/bin/ffmpeg"

@@ -1,0 +1,37 @@
+# Rust
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config files with sensitive data
+rvd.toml
+
+# Downloaded files
+*.mp4
+*.m4s
+*.srt
+*.jpg
+*.png
+
+# Temp directories
+.rvd_temp/
+
+ref/
+
+.kiro/
+
+PROJECT_SUMMARY.md
+STATS.md
+QUICKSTART.md
