@@ -7,10 +7,11 @@ use crate::error::{DownloaderError, Result};
 use crate::platform::bilibili::selector::select_best_streams;
 use crate::platform::bilibili::BilibiliPlatform;
 use crate::platform::Platform;
-use crate::types::{Auth, Page, StreamPreferences, VideoInfo};
+use crate::types::{Auth, Page, Stream, StreamPreferences, StreamType, VideoInfo};
 use crate::utils::config::Config;
 use crate::utils::file;
 use crate::utils::http::HttpClient;
+use dialoguer::Select;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -167,6 +168,64 @@ impl Orchestrator {
         }
     }
 
+    fn interactive_select_streams(&self, streams: &[Stream]) -> Result<(Stream, Stream)> {
+        let video_streams: Vec<&Stream> = streams
+            .iter()
+            .filter(|s| s.stream_type == StreamType::Video)
+            .collect();
+
+        let audio_streams: Vec<&Stream> = streams
+            .iter()
+            .filter(|s| s.stream_type == StreamType::Audio)
+            .collect();
+
+        if video_streams.is_empty() {
+            return Err(DownloaderError::DownloadFailed(
+                "No video streams available".to_string(),
+            ));
+        }
+
+        if audio_streams.is_empty() {
+            return Err(DownloaderError::DownloadFailed(
+                "No audio streams available".to_string(),
+            ));
+        }
+
+        // Select video stream
+        println!("\n🎬 Select video quality:");
+        let video_options: Vec<String> = video_streams
+            .iter()
+            .map(|s| format!("{} {} - {}kbps", s.quality, s.codec, s.bandwidth / 1000))
+            .collect();
+
+        let video_selection = Select::new()
+            .with_prompt("Video quality")
+            .items(&video_options)
+            .default(0)
+            .interact()
+            .map_err(|e| DownloaderError::Parse(format!("Selection failed: {}", e)))?;
+
+        let selected_video = video_streams[video_selection].clone();
+
+        // Select audio stream
+        println!("\n🔊 Select audio quality:");
+        let audio_options: Vec<String> = audio_streams
+            .iter()
+            .map(|s| format!("{} - {}kbps", s.codec, s.bandwidth / 1000))
+            .collect();
+
+        let audio_selection = Select::new()
+            .with_prompt("Audio quality")
+            .items(&audio_options)
+            .default(0)
+            .interact()
+            .map_err(|e| DownloaderError::Parse(format!("Selection failed: {}", e)))?;
+
+        let selected_audio = audio_streams[audio_selection].clone();
+
+        Ok((selected_video, selected_audio))
+    }
+
     async fn process_page(
         &self,
         video_info: &VideoInfo,
@@ -189,8 +248,12 @@ impl Orchestrator {
             ));
         }
 
-        // Select best streams
-        let (video_stream, audio_stream) = select_best_streams(&streams, preferences)?;
+        // Select best streams (interactive or automatic)
+        let (video_stream, audio_stream) = if cli.interactive {
+            self.interactive_select_streams(&streams)?
+        } else {
+            select_best_streams(&streams, preferences)?
+        };
 
         // Create temp directory
         let temp_dir = file::create_temp_dir(&format!("{}_{}", video_info.id, page.cid)).await?;
@@ -214,7 +277,10 @@ impl Orchestrator {
         // Download subtitles
         let mut subtitle_paths = Vec::new();
         if !cli.skip_subtitle {
-            if let Ok(subtitles) = platform.get_subtitles(&video_info.aid.to_string(), &page.cid).await {
+            if let Ok(subtitles) = platform
+                .get_subtitles(&video_info.aid.to_string(), &page.cid)
+                .await
+            {
                 for (i, subtitle) in subtitles.iter().enumerate() {
                     let subtitle_path = temp_dir.join(format!("subtitle_{}.srt", i));
                     if let Ok(()) = subtitle::download_and_convert_subtitle(

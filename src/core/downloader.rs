@@ -59,17 +59,19 @@ impl Downloader {
 
     async fn download_simple(&self, url: &str, output: &Path) -> Result<()> {
         let mut headers = reqwest::header::HeaderMap::new();
-        
+
         // Add required headers for Bilibili video downloads
         if url.contains("bilivideo.com") {
             if let Ok(value) = "https://www.bilibili.com".parse() {
                 headers.insert("Referer", value);
             }
-            if let Ok(value) = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".parse() {
+            if let Ok(value) =
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".parse()
+            {
                 headers.insert("User-Agent", value);
             }
         }
-        
+
         let response = self.client.get(url, Some(headers)).await?;
         let bytes = response.bytes().await?;
         tokio::fs::write(output, bytes).await?;
@@ -83,17 +85,19 @@ impl Downloader {
         progress: Option<Arc<ProgressBar>>,
     ) -> Result<()> {
         let mut headers = reqwest::header::HeaderMap::new();
-        
+
         // Add required headers for Bilibili video downloads
         if url.contains("bilivideo.com") {
             if let Ok(value) = "https://www.bilibili.com".parse() {
                 headers.insert("Referer", value);
             }
-            if let Ok(value) = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".parse() {
+            if let Ok(value) =
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".parse()
+            {
                 headers.insert("User-Agent", value);
             }
         }
-        
+
         let response = self.client.get(url, Some(headers)).await?;
         let mut file = File::create(output).await?;
         let mut stream = response.bytes_stream();
@@ -115,13 +119,16 @@ impl Downloader {
 
     async fn get_file_size(&self, url: &str) -> Result<u64> {
         let mut request = self.client.client.head(url);
-        
+
         // Add required headers for Bilibili video downloads
         if url.contains("bilivideo.com") {
             request = request.header("Referer", "https://www.bilibili.com");
-            request = request.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            request = request.header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            );
         }
-        
+
         let response = request.send().await?;
 
         if let Some(content_length) = response.headers().get("content-length") {
@@ -140,13 +147,16 @@ impl Downloader {
 
     async fn supports_range(&self, url: &str) -> bool {
         let mut request = self.client.client.head(url);
-        
+
         // Add required headers for Bilibili video downloads
         if url.contains("bilivideo.com") {
             request = request.header("Referer", "https://www.bilibili.com");
-            request = request.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            request = request.header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            );
         }
-        
+
         if let Ok(response) = request.send().await {
             if let Some(accept_ranges) = response.headers().get("accept-ranges") {
                 return accept_ranges.to_str().unwrap_or("") == "bytes";
@@ -170,7 +180,7 @@ impl Downloader {
         tokio::fs::create_dir_all(&temp_dir).await?;
 
         let mut chunk_paths = Vec::new();
-        
+
         for i in 0..chunk_count {
             let start = i * self.chunk_size;
             let end = std::cmp::min(start + self.chunk_size - 1, total_size as usize - 1);

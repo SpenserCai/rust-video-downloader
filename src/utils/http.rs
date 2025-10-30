@@ -101,7 +101,10 @@ impl HttpClient {
         // Add required headers for Bilibili video downloads
         if url.contains("bilivideo.com") {
             request = request.header("Referer", "https://www.bilibili.com");
-            request = request.header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            request = request.header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            );
         }
 
         if let Some((start, end)) = range {
