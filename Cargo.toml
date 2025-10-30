@@ -6,6 +6,10 @@ authors = ["RVD Contributors"]
 description = "A modular video downloader written in Rust"
 license = "MIT"
 
+[lib]
+name = "rvd"
+path = "src/lib.rs"
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
