@@ -20,7 +20,7 @@ fn load_test_config() -> Option<Config> {
         println!("⚠ 跳过测试：配置文件 {} 不存在", TEST_CONFIG_PATH);
         return None;
     }
-    
+
     match Config::load(&config_path) {
         Ok(config) => Some(config),
         Err(e) => {
@@ -70,16 +70,16 @@ fn check_output_exists(dir: &PathBuf, pattern: &str) -> bool {
 #[tokio::test]
 async fn test_32_1_parse_bvid_url() {
     println!("\n=== Task 32.1: 测试 BV 号解析 ===");
-    
+
     let config = load_test_config();
     let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
-    
+
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 测试 BV 号
     let test_url = "BV1qt4y1X7TW";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
         assert!(!video_info.id.is_empty());
         assert!(!video_info.title.is_empty());
@@ -92,16 +92,16 @@ async fn test_32_1_parse_bvid_url() {
 #[tokio::test]
 async fn test_32_1_parse_avid_url() {
     println!("\n=== Task 32.1: 测试 av 号解析 ===");
-    
+
     let config = load_test_config();
     let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
-    
+
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 测试 av 号
     let test_url = "av170001";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
         assert!(!video_info.id.is_empty());
         println!("✓ av号解析成功: {}", video_info.title);
@@ -113,18 +113,22 @@ async fn test_32_1_parse_avid_url() {
 #[tokio::test]
 async fn test_32_1_parse_multi_page_video() {
     println!("\n=== Task 32.1: 测试多分P视频解析 ===");
-    
+
     let config = load_test_config();
     let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
-    
+
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 测试多分P视频
     let test_url = "BV1At41167aj";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
-        println!("✓ 多分P视频解析成功: {} (共{}P)", video_info.title, video_info.pages.len());
+        println!(
+            "✓ 多分P视频解析成功: {} (共{}P)",
+            video_info.title,
+            video_info.pages.len()
+        );
         assert!(video_info.pages.len() > 1, "应该有多个分P");
     } else {
         println!("⚠ 多分P视频解析失败");
@@ -138,7 +142,7 @@ async fn test_32_1_parse_multi_page_video() {
 #[tokio::test]
 async fn test_32_2_parse_bangumi_by_ep() {
     println!("\n=== Task 32.2: 测试番剧 ep 链接解析 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => {
@@ -146,18 +150,22 @@ async fn test_32_2_parse_bangumi_by_ep() {
             return;
         }
     };
-    
+
     let auth = create_auth_from_config(&config);
     let platform = BilibiliPlatform::new().unwrap();
-    
-    // 测试番剧 ep 链接 - 一人之下
+
+    // 测试番剧 ep 链接 - 间谍过家家
     let test_url = "https://www.bilibili.com/bangumi/play/ep115735";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
         assert!(!video_info.title.is_empty());
         assert!(!video_info.pages.is_empty());
-        println!("✓ 番剧ep解析成功: {} (共{}集)", video_info.title, video_info.pages.len());
+        println!(
+            "✓ 番剧ep解析成功: {} (共{}集)",
+            video_info.title,
+            video_info.pages.len()
+        );
     } else {
         println!("⚠ 番剧ep解析失败（可能需要认证或地区限制）");
     }
@@ -166,7 +174,7 @@ async fn test_32_2_parse_bangumi_by_ep() {
 #[tokio::test]
 async fn test_32_2_parse_bangumi_by_ss() {
     println!("\n=== Task 32.2: 测试番剧 ss 链接解析 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => {
@@ -174,17 +182,21 @@ async fn test_32_2_parse_bangumi_by_ss() {
             return;
         }
     };
-    
+
     let auth = create_auth_from_config(&config);
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 测试番剧 ss 链接
     let test_url = "https://www.bilibili.com/bangumi/play/ss28341";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
         assert!(!video_info.title.is_empty());
-        println!("✓ 番剧ss解析成功: {} (共{}集)", video_info.title, video_info.pages.len());
+        println!(
+            "✓ 番剧ss解析成功: {} (共{}集)",
+            video_info.title,
+            video_info.pages.len()
+        );
     } else {
         println!("⚠ 番剧ss解析失败（可能需要认证或地区限制）");
     }
@@ -193,15 +205,15 @@ async fn test_32_2_parse_bangumi_by_ss() {
 #[tokio::test]
 async fn test_32_2_download_bangumi_single_episode() {
     println!("\n=== Task 32.2: 测试下载番剧单集 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("bangumi");
-    let test_url = "https://www.bilibili.com/bangumi/play/ep394750";
-    
+    let test_url = "https://www.bilibili.com/bangumi/play/ep691450";
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -225,17 +237,21 @@ async fn test_32_2_download_bangumi_single_episode() {
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ 番剧单集下载成功");
-                assert!(check_output_exists(&output_dir, ".mp4") || check_output_exists(&output_dir, ".m4s"));
+                assert!(
+                    check_output_exists(&output_dir, ".mp4")
+                        || check_output_exists(&output_dir, ".m4s")
+                );
             }
             Ok(Err(e)) => println!("⚠ 番剧下载失败: {}", e),
             Err(_) => println!("⚠ 番剧下载超时（功能正常，但下载时间过长）"),
@@ -252,26 +268,26 @@ async fn test_32_2_download_bangumi_single_episode() {
 #[tokio::test]
 async fn test_32_3_parse_favorite_list() {
     println!("\n=== Task 32.3: 测试收藏夹解析 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let auth = create_auth_from_config(&config);
     if auth.is_none() {
         println!("⚠ 跳过测试：需要配置 cookie");
         return;
     }
-    
+
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 注意：收藏夹测试需要有效的收藏夹ID和用户mid
     // 这里使用一个示例格式，实际测试时需要替换为真实的收藏夹
     let test_url = "https://space.bilibili.com/1/favlist?fid=1";
-    
+
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     match result {
         Ok(video_info) => {
             println!("✓ 收藏夹解析成功，找到视频: {}", video_info.title);
@@ -289,7 +305,7 @@ async fn test_32_3_parse_favorite_list() {
 #[tokio::test]
 async fn test_32_4_parse_space_videos() {
     println!("\n=== Task 32.4: 测试UP主空间视频解析 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => {
@@ -297,14 +313,14 @@ async fn test_32_4_parse_space_videos() {
             return;
         }
     };
-    
+
     let auth = create_auth_from_config(&config);
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 测试一个活跃UP主
     let test_url = "https://space.bilibili.com/289491017";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     match result {
         Ok(video_info) => {
             println!("✓ UP主空间解析成功，找到视频: {}", video_info.title);
@@ -322,21 +338,21 @@ async fn test_32_4_parse_space_videos() {
 #[tokio::test]
 async fn test_32_5_parse_media_list() {
     println!("\n=== Task 32.5: 测试合集解析 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let auth = create_auth_from_config(&config);
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 注意：合集测试需要有效的合集ID，这里使用示例格式
     // 实际测试时需要替换为真实的合集链接
     let test_url = "https://www.bilibili.com/medialist/play/ml123456";
-    
+
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     match result {
         Ok(video_info) => {
             println!("✓ 合集解析成功，找到视频: {}", video_info.title);
@@ -350,21 +366,21 @@ async fn test_32_5_parse_media_list() {
 #[tokio::test]
 async fn test_32_5_parse_series_list() {
     println!("\n=== Task 32.5: 测试系列解析 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let auth = create_auth_from_config(&config);
     let platform = BilibiliPlatform::new().unwrap();
-    
+
     // 注意：系列测试需要有效的mid和系列ID，这里使用示例格式
     // 实际测试时需要替换为真实的系列链接
     let test_url = "https://space.bilibili.com/123456/channel/seriesdetail?sid=789";
-    
+
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     match result {
         Ok(video_info) => {
             println!("✓ 系列解析成功，找到视频: {}", video_info.title);
@@ -383,16 +399,16 @@ async fn test_32_5_parse_series_list() {
 #[ignore] // TV API 需要特殊配置，暂时忽略
 async fn test_32_6_tv_api_mode() {
     println!("\n=== Task 32.6: 测试 TV API 模式 ===");
-    
+
     let config = load_test_config();
     let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
-    
+
     use rvd::platform::bilibili::ApiMode;
     let platform = BilibiliPlatform::with_api_mode(ApiMode::TV).unwrap();
-    
+
     let test_url = "BV1qt4y1X7TW";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
         println!("✓ TV API模式解析成功: {}", video_info.title);
     } else {
@@ -404,16 +420,16 @@ async fn test_32_6_tv_api_mode() {
 #[ignore] // APP API 需要 access_token，暂时忽略
 async fn test_32_6_app_api_mode() {
     println!("\n=== Task 32.6: 测试 APP API 模式 ===");
-    
+
     let config = load_test_config();
     let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
-    
+
     use rvd::platform::bilibili::ApiMode;
     let platform = BilibiliPlatform::with_api_mode(ApiMode::App).unwrap();
-    
+
     let test_url = "BV1qt4y1X7TW";
     let result = platform.parse_video(test_url, auth.as_ref()).await;
-    
+
     if let Ok(video_info) = result {
         println!("✓ APP API模式解析成功: {}", video_info.title);
     } else {
@@ -425,15 +441,15 @@ async fn test_32_6_app_api_mode() {
 #[ignore] // TV API 下载需要特殊配置，暂时忽略
 async fn test_32_6_download_with_tv_api() {
     println!("\n=== Task 32.6: 测试使用 TV API 下载 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("tv_api");
     let test_url = "BV1qt4y1X7TW";
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -457,17 +473,21 @@ async fn test_32_6_download_with_tv_api() {
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ TV API下载成功");
-                assert!(check_output_exists(&output_dir, ".mp4") || check_output_exists(&output_dir, ".m4s"));
+                assert!(
+                    check_output_exists(&output_dir, ".mp4")
+                        || check_output_exists(&output_dir, ".m4s")
+                );
             }
             Ok(Err(e)) => println!("⚠ TV API下载失败: {}", e),
             Err(_) => println!("⚠ TV API下载超时（功能正常）"),
@@ -484,15 +504,15 @@ async fn test_32_6_download_with_tv_api() {
 #[tokio::test]
 async fn test_32_7_download_danmaku_xml() {
     println!("\n=== Task 32.7: 测试下载 XML 格式弹幕 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("danmaku_xml");
     let test_url = "BV1B647zAENv"; // 使用有弹幕的视频
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -516,13 +536,14 @@ async fn test_32_7_download_danmaku_xml() {
         download_danmaku: true, // 下载弹幕
         danmaku_format: "xml".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ XML弹幕下载成功");
@@ -539,15 +560,15 @@ async fn test_32_7_download_danmaku_xml() {
 #[tokio::test]
 async fn test_32_7_download_danmaku_ass() {
     println!("\n=== Task 32.7: 测试下载 ASS 格式弹幕 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("danmaku_ass");
     let test_url = "BV1uv411q7Mv";
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -571,13 +592,14 @@ async fn test_32_7_download_danmaku_ass() {
         download_danmaku: true,
         danmaku_format: "ass".to_string(), // ASS格式
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ ASS弹幕下载成功");
@@ -598,20 +620,20 @@ async fn test_32_7_download_danmaku_ass() {
 #[tokio::test]
 async fn test_32_8_fetch_chapters() {
     println!("\n=== Task 32.8: 测试章节信息提取 ===");
-    
-    use rvd::utils::http::HttpClient;
+
     use rvd::platform::bilibili::parser::fetch_chapters;
+    use rvd::utils::http::HttpClient;
     use std::sync::Arc;
-    
+
     let client = Arc::new(HttpClient::new().unwrap());
-    
+
     // 测试番剧视频的章节信息（通常有片头片尾）
     // 注意：这里需要使用真实的 aid 和 cid，可以从视频信息API获取
     let test_aid = "170001";
     let test_cid = "279786"; // 示例 cid
-    
+
     let result = fetch_chapters(&client, test_aid, test_cid).await;
-    
+
     match result {
         Ok(chapters) => {
             if chapters.is_empty() {
@@ -619,7 +641,10 @@ async fn test_32_8_fetch_chapters() {
             } else {
                 println!("✓ 章节信息提取成功，找到 {} 个章节", chapters.len());
                 for chapter in chapters {
-                    println!("  - {}: {}s - {}s", chapter.title, chapter.start, chapter.end);
+                    println!(
+                        "  - {}: {}s - {}s",
+                        chapter.title, chapter.start, chapter.end
+                    );
                 }
             }
         }
@@ -632,16 +657,16 @@ async fn test_32_8_fetch_chapters() {
 #[tokio::test]
 async fn test_32_8_download_with_chapters() {
     println!("\n=== Task 32.8: 测试下载并嵌入章节信息 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("chapters");
     // 使用番剧链接，番剧通常有章节信息
     let test_url = "https://www.bilibili.com/bangumi/play/ep394750";
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -665,13 +690,14 @@ async fn test_32_8_download_with_chapters() {
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ 章节嵌入下载成功");
@@ -692,15 +718,15 @@ async fn test_32_8_download_with_chapters() {
 #[tokio::test]
 async fn test_32_9_interactive_mode_disabled() {
     println!("\n=== Task 32.9: 测试非交互式模式（自动选择） ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("non_interactive");
     let test_url = "BV1qt4y1X7TW";
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: Some("1080P,720P".to_string()),
@@ -724,17 +750,21 @@ async fn test_32_9_interactive_mode_disabled() {
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ 非交互式模式下载成功（自动选择清晰度）");
-                assert!(check_output_exists(&output_dir, ".mp4") || check_output_exists(&output_dir, ".m4s"));
+                assert!(
+                    check_output_exists(&output_dir, ".mp4")
+                        || check_output_exists(&output_dir, ".m4s")
+                );
             }
             Ok(Err(e)) => println!("⚠ 非交互式下载失败: {}", e),
             Err(_) => println!("⚠ 非交互式下载超时（功能正常）"),
@@ -751,15 +781,15 @@ async fn test_32_9_interactive_mode_disabled() {
 #[tokio::test]
 async fn test_complete_download_workflow() {
     println!("\n=== 综合测试: 完整下载流程（视频+音频+字幕+封面+弹幕） ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("complete");
     let test_url = "BV1uv411q7Mv"; // 使用有字幕和弹幕的视频
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: Some("1080P,720P".to_string()),
@@ -783,27 +813,28 @@ async fn test_complete_download_workflow() {
         download_danmaku: true, // 下载弹幕
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS),
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ 完整下载流程成功");
-                
+
                 // 检查各种输出文件
                 let has_video = check_output_exists(&output_dir, ".mp4");
                 let has_danmaku = check_output_exists(&output_dir, ".ass");
-                let has_cover = check_output_exists(&output_dir, ".jpg") || 
-                               check_output_exists(&output_dir, ".png");
-                
+                let has_cover = check_output_exists(&output_dir, ".jpg")
+                    || check_output_exists(&output_dir, ".png");
+
                 println!("  - 视频文件: {}", if has_video { "✓" } else { "✗" });
                 println!("  - 弹幕文件: {}", if has_danmaku { "✓" } else { "✗" });
                 println!("  - 封面文件: {}", if has_cover { "✓" } else { "✗" });
-                
+
                 assert!(has_video, "应该生成视频文件");
             }
             Ok(Err(e)) => println!("⚠ 完整下载流程失败: {}", e),
@@ -821,15 +852,15 @@ async fn test_complete_download_workflow() {
 #[tokio::test]
 async fn test_multi_page_download() {
     println!("\n=== 测试多分P视频下载 ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("multi_page");
     let test_url = "BV1At41167aj";
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -853,17 +884,18 @@ async fn test_multi_page_download() {
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(TEST_TIMEOUT_SECS * 2), // 多分P给更多时间
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ 多分P下载成功");
-                
+
                 // 检查是否生成了多个文件
                 if let Ok(entries) = std::fs::read_dir(&output_dir) {
                     let mp4_count = entries
@@ -889,15 +921,15 @@ async fn test_multi_page_download() {
 #[tokio::test]
 async fn test_info_only_mode() {
     println!("\n=== 测试 Info-only 模式（仅显示信息不下载） ===");
-    
+
     let config = match load_test_config() {
         Some(c) => c,
         None => return,
     };
-    
+
     let output_dir = setup_test_dir("info_only");
     let test_url = "BV1qt4y1X7TW";
-    
+
     let cli = Cli {
         url: test_url.to_string(),
         quality: None,
@@ -921,18 +953,22 @@ async fn test_info_only_mode() {
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
     };
-    
+
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
         let result = timeout(
             Duration::from_secs(30), // Info-only应该很快
-            orchestrator.run(cli)
-        ).await;
-        
+            orchestrator.run(cli),
+        )
+        .await;
+
         match result {
             Ok(Ok(_)) => {
                 println!("✓ Info-only模式成功");
                 // Info-only模式不应该生成视频文件
-                assert!(!check_output_exists(&output_dir, ".mp4"), "Info-only模式不应该生成视频文件");
+                assert!(
+                    !check_output_exists(&output_dir, ".mp4"),
+                    "Info-only模式不应该生成视频文件"
+                );
             }
             Ok(Err(e)) => println!("⚠ Info-only模式失败: {}", e),
             Err(_) => println!("⚠ Info-only模式超时"),
@@ -949,7 +985,7 @@ async fn test_info_only_mode() {
 #[tokio::test]
 async fn test_cleanup_old_files() {
     println!("\n=== 清理旧的测试文件 ===");
-    
+
     let test_dir = PathBuf::from(TEST_OUTPUT_DIR);
     if test_dir.exists() {
         if let Ok(entries) = std::fs::read_dir(&test_dir) {

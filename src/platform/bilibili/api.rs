@@ -15,6 +15,12 @@ pub struct BangumiApiResponse<T> {
     pub result: Option<T>,
 }
 
+// 番剧播放URL的响应结构
+#[derive(Debug, Deserialize)]
+pub struct BangumiPlayUrlResult {
+    pub video_info: PlayUrlData,
+}
+
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct VideoInfoData {

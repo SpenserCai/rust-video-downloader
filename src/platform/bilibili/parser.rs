@@ -133,6 +133,7 @@ fn convert_to_video_info(data: VideoInfoData) -> Result<VideoInfo> {
             title: p.part,
             cid: p.cid.to_string(),
             duration: p.duration,
+            ep_id: None,
         })
         .collect();
 
@@ -147,6 +148,8 @@ fn convert_to_video_info(data: VideoInfoData) -> Result<VideoInfo> {
         upload_date: format_timestamp(data.pubdate),
         cover_url: data.pic,
         pages,
+        is_bangumi: false,
+        ep_id: None,
     })
 }
 
@@ -167,18 +170,48 @@ pub async fn get_play_url_with_mode(
     auth: Option<&Auth>,
     api_mode: super::ApiMode,
 ) -> Result<Vec<Stream>> {
+    get_play_url_with_mode_and_ep(client, video_id, cid, auth, api_mode, None).await
+}
+
+pub async fn get_play_url_with_mode_and_ep(
+    client: &Arc<HttpClient>,
+    video_id: &str,
+    cid: &str,
+    auth: Option<&Auth>,
+    api_mode: super::ApiMode,
+    ep_id: Option<&str>,
+) -> Result<Vec<Stream>> {
+    let is_bangumi = ep_id.is_some();
+    
     let api = match api_mode {
         super::ApiMode::Web => {
-            format!(
-                "https://api.bilibili.com/x/player/wbi/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
-                video_id, cid
-            )
+            if is_bangumi {
+                // 番剧使用不同的API端点
+                let ep_param = ep_id.unwrap();
+                format!(
+                    "https://api.bilibili.com/pgc/player/web/v2/playurl?support_multi_audio=true&avid={}&cid={}&ep_id={}&fnval=4048&fnver=0&fourk=1&qn=127",
+                    video_id, cid, ep_param
+                )
+            } else {
+                format!(
+                    "https://api.bilibili.com/x/player/wbi/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                    video_id, cid
+                )
+            }
         }
         super::ApiMode::TV => {
-            format!(
-                "https://api.snm0516.aisee.tv/x/tv/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
-                video_id, cid
-            )
+            if is_bangumi {
+                let ep_param = ep_id.unwrap();
+                format!(
+                    "https://api.snm0516.aisee.tv/pgc/player/api/playurltv?avid={}&cid={}&ep_id={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                    video_id, cid, ep_param
+                )
+            } else {
+                format!(
+                    "https://api.snm0516.aisee.tv/x/tv/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                    video_id, cid
+                )
+            }
         }
         super::ApiMode::App => {
             // APP API 需要特殊的签名，这里使用简化版本
@@ -200,19 +233,37 @@ pub async fn get_play_url_with_mode(
 
     tracing::debug!("Play URL response: {}", json_text);
 
-    let api_response: ApiResponse<PlayUrlData> = serde_json::from_str(&json_text)
-        .map_err(|e| DownloaderError::Parse(format!("Failed to parse play URL: {}", e)))?;
+    // 番剧API返回result字段，普通视频返回data字段
+    let data = if is_bangumi {
+        let api_response: super::api::BangumiApiResponse<super::api::BangumiPlayUrlResult> = serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi play URL: {}", e)))?;
 
-    if api_response.code != 0 {
-        return Err(DownloaderError::Api(format!(
-            "API error: {}",
-            api_response.message
-        )));
-    }
+        if api_response.code != 0 {
+            return Err(DownloaderError::Api(format!(
+                "API error: {}",
+                api_response.message
+            )));
+        }
 
-    let data = api_response
-        .data
-        .ok_or_else(|| DownloaderError::DownloadFailed("No play URL data".to_string()))?;
+        api_response
+            .result
+            .ok_or_else(|| DownloaderError::DownloadFailed("No play URL data".to_string()))?
+            .video_info
+    } else {
+        let api_response: ApiResponse<PlayUrlData> = serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse play URL: {}", e)))?;
+
+        if api_response.code != 0 {
+            return Err(DownloaderError::Api(format!(
+                "API error: {}",
+                api_response.message
+            )));
+        }
+
+        api_response
+            .data
+            .ok_or_else(|| DownloaderError::DownloadFailed("No play URL data".to_string()))?
+    };
 
     let mut streams = Vec::new();
 
@@ -412,6 +463,7 @@ fn convert_bangumi_to_video_info(data: BangumiInfoData, target_ep_id: &str) -> R
 
     let mut pages = Vec::new();
     let mut index = 1;
+    let mut ep_id_for_first_page = None;
 
     for episode in episodes {
         // 跳过预告
@@ -420,12 +472,19 @@ fn convert_bangumi_to_video_info(data: BangumiInfoData, target_ep_id: &str) -> R
         }
 
         let ep_title = format!("{} {}", episode.title, episode.long_title).trim().to_string();
+        let current_ep_id = episode.id.to_string();
+
+        // 保存第一个episode的ep_id
+        if ep_id_for_first_page.is_none() {
+            ep_id_for_first_page = Some(current_ep_id.clone());
+        }
 
         pages.push(Page {
             number: index,
             title: ep_title,
             cid: episode.cid.to_string(),
             duration: 0, // Duration not provided in bangumi API
+            ep_id: Some(current_ep_id),
         });
 
         index += 1;
@@ -450,6 +509,8 @@ fn convert_bangumi_to_video_info(data: BangumiInfoData, target_ep_id: &str) -> R
         upload_date: pub_time,
         cover_url: data.cover,
         pages,
+        is_bangumi: true,
+        ep_id: ep_id_for_first_page,
     })
 }
 
@@ -491,6 +552,7 @@ fn convert_cheese_to_video_info(data: CheeseInfoData) -> Result<VideoInfo> {
             title: ep.title.trim().to_string(),
             cid: ep.cid.to_string(),
             duration: ep.duration,
+            ep_id: None, // 课程不使用ep_id
         })
         .collect::<Vec<_>>();
 
@@ -511,6 +573,8 @@ fn convert_cheese_to_video_info(data: CheeseInfoData) -> Result<VideoInfo> {
         upload_date: pub_time,
         cover_url: data.cover,
         pages,
+        is_bangumi: true, // 课程也算番剧类型
+        ep_id: None,
     })
 }
 
@@ -618,7 +682,10 @@ pub async fn fetch_favorite_list(
                         title,
                         cid: media.ugc.as_ref().map(|u| u.first_cid.to_string()).unwrap_or_default(),
                         duration: media.duration,
+                        ep_id: None,
                     }],
+                    is_bangumi: false,
+                    ep_id: None,
                 };
                 all_videos.push(video_info);
             }
@@ -664,7 +731,10 @@ pub async fn fetch_favorite_list(
                                 title,
                                 cid: media.ugc.as_ref().map(|u| u.first_cid.to_string()).unwrap_or_default(),
                                 duration: media.duration,
+                                ep_id: None,
                             }],
+                            is_bangumi: false,
+                            ep_id: None,
                         };
                         all_videos.push(video_info);
                     }

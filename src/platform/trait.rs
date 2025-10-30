@@ -7,6 +7,9 @@ use async_trait::async_trait;
 /// without modifying the core download logic.
 #[async_trait]
 pub trait Platform: Send + Sync {
+    /// Get a reference to self as Any for downcasting
+    fn as_any(&self) -> &dyn std::any::Any;
+    
     /// Check if this platform can handle the given URL.
     ///
     /// # Arguments

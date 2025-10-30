@@ -119,6 +119,10 @@ impl BilibiliPlatform {
 
 #[async_trait]
 impl Platform for BilibiliPlatform {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+    
     fn can_handle(&self, url: &str) -> bool {
         url.contains("bilibili.com")
             || url.contains("b23.tv")
@@ -157,5 +161,19 @@ impl Platform for BilibiliPlatform {
 
     fn name(&self) -> &str {
         "bilibili"
+    }
+}
+
+// BilibiliPlatform specific methods
+impl BilibiliPlatform {
+    /// Get streams for bangumi/pgc content with ep_id
+    pub async fn get_bangumi_streams(
+        &self,
+        video_id: &str,
+        cid: &str,
+        ep_id: &str,
+        auth: Option<&Auth>,
+    ) -> Result<Vec<Stream>> {
+        parser::get_play_url_with_mode_and_ep(&self.client, video_id, cid, auth, self.api_mode, Some(ep_id)).await
     }
 }

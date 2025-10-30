@@ -266,9 +266,35 @@ impl Orchestrator {
         };
 
         // Get streams (use aid for bilibili API)
-        let streams = platform
-            .get_streams(&video_info.aid.to_string(), &page.cid, auth)
-            .await?;
+        let streams = if video_info.is_bangumi {
+            // 番剧需要使用特殊的API
+            if let Some(platform_bilibili) = platform.as_any().downcast_ref::<crate::platform::bilibili::BilibiliPlatform>() {
+                if let Some(ref ep_id) = page.ep_id {
+                    // 使用page的ep_id（每个episode有自己的ep_id）
+                    platform_bilibili
+                        .get_bangumi_streams(&video_info.aid.to_string(), &page.cid, ep_id, auth)
+                        .await?
+                } else if let Some(ref ep_id) = video_info.ep_id {
+                    // 如果page没有ep_id，使用video_info的ep_id
+                    platform_bilibili
+                        .get_bangumi_streams(&video_info.aid.to_string(), &page.cid, ep_id, auth)
+                        .await?
+                } else {
+                    // 如果都没有ep_id，尝试使用普通API
+                    platform
+                        .get_streams(&video_info.aid.to_string(), &page.cid, auth)
+                        .await?
+                }
+            } else {
+                platform
+                    .get_streams(&video_info.aid.to_string(), &page.cid, auth)
+                    .await?
+            }
+        } else {
+            platform
+                .get_streams(&video_info.aid.to_string(), &page.cid, auth)
+                .await?
+        };
 
         if streams.is_empty() {
             return Err(DownloaderError::DownloadFailed(
