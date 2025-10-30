@@ -42,6 +42,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Regex
 regex = "1.10"
 
+# Compression (for manual gzip decompression if needed)
+flate2 = "1.0"
+
 # Async trait
 async-trait = "0.1"
 

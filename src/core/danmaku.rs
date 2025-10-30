@@ -12,15 +12,68 @@ pub enum DanmakuFormat {
 
 /// 下载弹幕
 pub async fn download_danmaku(
-    client: &Arc<HttpClient>,
+    _client: &Arc<HttpClient>,
     cid: &str,
     output: &Path,
     format: DanmakuFormat,
 ) -> Result<()> {
     // 下载 XML 格式弹幕
     let api = format!("https://comment.bilibili.com/{}.xml", cid);
-    let response = client.get(&api, None).await?;
-    let xml_content = response.text().await?;
+    tracing::debug!("Fetching danmaku from: {}", api);
+    
+    // Create a client with automatic decompression disabled
+    // We need to manually decompress because Bilibili's deflate encoding causes issues with reqwest
+    let raw_client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .timeout(std::time::Duration::from_secs(60))
+        .no_gzip()
+        .no_deflate()
+        .no_brotli()
+        .build()
+        .map_err(|e| crate::error::DownloaderError::Network(e))?;
+    
+    let response = raw_client.get(&api).send().await?;
+    
+    if !response.status().is_success() {
+        return Err(crate::error::DownloaderError::DownloadFailed(
+            format!("Failed to fetch danmaku: HTTP {}", response.status())
+        ));
+    }
+    
+    tracing::debug!("Response status: {}", response.status());
+    
+    let bytes = response.bytes().await?;
+    
+    // Try to decode as UTF-8 directly first, or decompress if needed
+    let xml_content = match String::from_utf8(bytes.to_vec()) {
+        Ok(text) => text,
+        Err(_) => {
+            // Try deflate decompression (most common for Bilibili danmaku API)
+            use flate2::read::DeflateDecoder;
+            use std::io::Read;
+            
+            let mut decoder = DeflateDecoder::new(&bytes[..]);
+            let mut decompressed = String::new();
+            match decoder.read_to_string(&mut decompressed) {
+                Ok(_) => {
+                    tracing::debug!("Decompressed danmaku with deflate");
+                    decompressed
+                }
+                Err(_) => {
+                    // Try gzip as fallback
+                    use flate2::read::GzDecoder;
+                    let mut decoder = GzDecoder::new(&bytes[..]);
+                    let mut decompressed = String::new();
+                    decoder.read_to_string(&mut decompressed)
+                        .map_err(|e| crate::error::DownloaderError::DownloadFailed(
+                            format!("Failed to decompress danmaku: {}", e)
+                        ))?;
+                    tracing::debug!("Decompressed danmaku with gzip");
+                    decompressed
+                }
+            }
+        }
+    };
 
     if xml_content.is_empty() || !xml_content.contains("<d ") {
         tracing::info!("No danmaku available for cid: {}", cid);
