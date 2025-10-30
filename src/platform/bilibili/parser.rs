@@ -25,40 +25,47 @@ pub async fn parse_video_info(
     client: &Arc<HttpClient>,
     video_type: VideoType,
     auth: Option<&Auth>,
-) -> Result<VideoInfo> {
+    wbi_manager: Option<&mut super::wbi::WbiManager>,
+) -> Result<super::ParseResult> {
     match video_type {
-        VideoType::Bvid(bvid) => fetch_video_info_by_bvid(client, &bvid, auth).await,
-        VideoType::Aid(aid) => fetch_video_info_by_aid(client, &aid, auth).await,
-        VideoType::Episode(ep) => fetch_bangumi_info_by_ep(client, &ep, auth).await,
-        VideoType::Season(ss) => fetch_bangumi_info_by_ss(client, &ss, auth).await,
-        VideoType::Cheese(ep) => fetch_cheese_info(client, &ep, auth).await,
+        VideoType::Bvid(bvid) => {
+            let video = fetch_video_info_by_bvid(client, &bvid, auth).await?;
+            Ok(super::ParseResult::Single(Box::new(video)))
+        }
+        VideoType::Aid(aid) => {
+            let video = fetch_video_info_by_aid(client, &aid, auth).await?;
+            Ok(super::ParseResult::Single(Box::new(video)))
+        }
+        VideoType::Episode(ep) => {
+            let video = fetch_bangumi_info_by_ep(client, &ep, auth).await?;
+            Ok(super::ParseResult::Single(Box::new(video)))
+        }
+        VideoType::Season(ss) => {
+            let video = fetch_bangumi_info_by_ss(client, &ss, auth).await?;
+            Ok(super::ParseResult::Single(Box::new(video)))
+        }
+        VideoType::Cheese(ep) => {
+            let video = fetch_cheese_info(client, &ep, auth).await?;
+            Ok(super::ParseResult::Single(Box::new(video)))
+        }
         VideoType::FavoriteList(fav_info) => {
-            // 批量下载收藏夹：返回第一个视频的信息，实际应该在orchestrator中处理批量
             let videos = fetch_favorite_list(client, &fav_info, auth).await?;
-            videos.into_iter().next().ok_or_else(|| {
-                DownloaderError::Parse("Favorite list is empty".to_string())
-            })
+            Ok(super::ParseResult::Batch(videos))
         }
         VideoType::SpaceVideo(mid) => {
-            // 批量下载UP主空间：返回第一个视频的信息
-            let videos = fetch_space_videos(client, &mid, auth).await?;
-            videos.into_iter().next().ok_or_else(|| {
-                DownloaderError::Parse("Space has no videos".to_string())
-            })
+            let wbi = wbi_manager.ok_or_else(|| {
+                DownloaderError::Api("WBI manager required for space video".to_string())
+            })?;
+            let videos = fetch_space_videos(client, &mid, auth, wbi).await?;
+            Ok(super::ParseResult::Batch(videos))
         }
         VideoType::MediaList(media_id) => {
-            // 批量下载合集：返回第一个视频的信息
             let videos = fetch_media_list(client, &media_id, auth).await?;
-            videos.into_iter().next().ok_or_else(|| {
-                DownloaderError::Parse("Media list is empty".to_string())
-            })
+            Ok(super::ParseResult::Batch(videos))
         }
         VideoType::SeriesList(series_info) => {
-            // 批量下载系列：返回第一个视频的信息
             let videos = fetch_series_list(client, &series_info, auth).await?;
-            videos.into_iter().next().ok_or_else(|| {
-                DownloaderError::Parse("Series list is empty".to_string())
-            })
+            Ok(super::ParseResult::Batch(videos))
         }
     }
 }
@@ -746,11 +753,12 @@ pub async fn fetch_favorite_list(
     Ok(all_videos)
 }
 
-// UP主空间视频获取
+// UP主空间视频获取（需要WBI签名）
 pub async fn fetch_space_videos(
     client: &Arc<HttpClient>,
     mid: &str,
     auth: Option<&Auth>,
+    wbi_manager: &mut super::wbi::WbiManager,
 ) -> Result<Vec<VideoInfo>> {
     // 获取用户信息
     let user_info_api = format!("https://api.live.bilibili.com/live_user/v1/Master/info?uid={}", mid);
@@ -768,11 +776,11 @@ pub async fn fetch_space_videos(
     let page_size = 50;
     let mut all_videos = Vec::new();
 
-    // 获取第一页
-    let api = format!(
-        "https://api.bilibili.com/x/space/wbi/arc/search?mid={}&order=pubdate&pn=1&ps={}&tid=0",
-        mid, page_size
-    );
+    // 获取第一页 - 使用WBI签名
+    let base_params = format!("mid={}&order=pubdate&pn=1&ps={}&tid=0", mid, page_size);
+    let signed_params = wbi_manager.sign_url(&base_params).await?;
+    let api = format!("https://api.bilibili.com/x/space/wbi/arc/search?{}", signed_params);
+    
     let response = client.get_with_auth(&api, auth).await?;
     let json_text = response.text().await?;
 
@@ -804,10 +812,10 @@ pub async fn fetch_space_videos(
 
     // 获取剩余页面
     for page in 2..=total_pages {
-        let api = format!(
-            "https://api.bilibili.com/x/space/wbi/arc/search?mid={}&order=pubdate&pn={}&ps={}&tid=0",
-            mid, page, page_size
-        );
+        let base_params = format!("mid={}&order=pubdate&pn={}&ps={}&tid=0", mid, page, page_size);
+        let signed_params = wbi_manager.sign_url(&base_params).await?;
+        let api = format!("https://api.bilibili.com/x/space/wbi/arc/search?{}", signed_params);
+        
         let response = client.get_with_auth(&api, auth).await?;
         let json_text = response.text().await?;
 

@@ -1,6 +1,7 @@
 mod api;
 pub mod parser;
 pub mod selector;
+pub mod wbi;
 
 use crate::error::{DownloaderError, Result};
 use crate::platform::r#trait::Platform;
@@ -10,9 +11,17 @@ use async_trait::async_trait;
 use regex::Regex;
 use std::sync::Arc;
 
+/// Result of parsing a video URL - can be either a single video or a batch of videos
+#[derive(Debug)]
+pub enum ParseResult {
+    Single(Box<VideoInfo>),
+    Batch(Vec<VideoInfo>),
+}
+
 pub struct BilibiliPlatform {
     client: Arc<HttpClient>,
     api_mode: ApiMode,
+    wbi_manager: tokio::sync::Mutex<wbi::WbiManager>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -44,9 +53,12 @@ impl BilibiliPlatform {
     }
 
     pub fn with_api_mode(api_mode: ApiMode) -> Result<Self> {
+        let client = Arc::new(HttpClient::new()?);
+        let wbi_manager = wbi::WbiManager::new(client.clone());
         Ok(Self {
-            client: Arc::new(HttpClient::new()?),
+            client,
             api_mode,
+            wbi_manager: tokio::sync::Mutex::new(wbi_manager),
         })
     }
 
@@ -139,7 +151,22 @@ impl Platform for BilibiliPlatform {
 
     async fn parse_video(&self, url: &str, auth: Option<&Auth>) -> Result<VideoInfo> {
         let video_type = self.parse_url(url)?;
-        parser::parse_video_info(&self.client, video_type, auth).await
+        let mut wbi = self.wbi_manager.lock().await;
+        let result = parser::parse_video_info(&self.client, video_type, auth, Some(&mut *wbi)).await?;
+        
+        match result {
+            ParseResult::Single(video) => Ok(*video),
+            ParseResult::Batch(mut videos) => {
+                // For batch results, return the first video
+                // The caller should use parse_video_batch for full batch support
+                if videos.is_empty() {
+                    Err(DownloaderError::Parse("Batch result is empty".to_string()))
+                } else {
+                    tracing::warn!("Batch URL detected but only returning first video. Use parse_video_batch for full batch support.");
+                    Ok(videos.remove(0))
+                }
+            }
+        }
     }
 
     async fn get_streams(
@@ -166,6 +193,21 @@ impl Platform for BilibiliPlatform {
 
 // BilibiliPlatform specific methods
 impl BilibiliPlatform {
+    /// Parse a video URL and return all videos (for batch downloads)
+    /// 
+    /// This method handles batch URLs (favorites, space videos, playlists, etc.)
+    /// and returns all videos in the batch. For single video URLs, returns a Vec with one element.
+    pub async fn parse_video_batch(&self, url: &str, auth: Option<&Auth>) -> Result<Vec<VideoInfo>> {
+        let video_type = self.parse_url(url)?;
+        let mut wbi = self.wbi_manager.lock().await;
+        let result = parser::parse_video_info(&self.client, video_type, auth, Some(&mut *wbi)).await?;
+        
+        match result {
+            ParseResult::Single(video) => Ok(vec![*video]),
+            ParseResult::Batch(videos) => Ok(videos),
+        }
+    }
+
     /// Get streams for bangumi/pgc content with ep_id
     pub async fn get_bangumi_streams(
         &self,

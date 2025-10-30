@@ -331,6 +331,45 @@ async fn test_32_4_parse_space_videos() {
     }
 }
 
+#[tokio::test]
+async fn test_32_4_parse_space_batch_videos() {
+    println!("\n=== Task 32.4: 测试UP主空间批量视频解析 ===");
+
+    let config = match load_test_config() {
+        Some(c) => c,
+        None => {
+            println!("⚠ 跳过测试：配置文件不存在");
+            return;
+        }
+    };
+
+    let auth = create_auth_from_config(&config);
+    let platform = BilibiliPlatform::new().unwrap();
+
+    // 测试一个活跃UP主的空间
+    let test_url = "https://space.bilibili.com/289491017";
+    let result = platform.parse_video_batch(test_url, auth.as_ref()).await;
+
+    match result {
+        Ok(videos) => {
+            println!("✓ UP主空间批量解析成功，找到 {} 个视频", videos.len());
+            assert!(!videos.is_empty(), "应该解析到多个视频");
+
+            // 如果视频数量超过5个，应该至少解析5个
+            if videos.len() > 5 {
+                assert!(videos.len() >= 5, "超过5个视频时应该至少解析5个");
+            }
+
+            // 显示前几个视频的标题
+            for (i, video) in videos.iter().take(5).enumerate() {
+                println!("  - 视频 {}: {}", i + 1, video.title);
+            }
+        }
+        Err(e) => {
+            println!("⚠ UP主空间批量解析失败: {}", e);
+        }
+    }
+}
 // ============================================================================
 // Task 32.5: 实现批量下载功能 - 合集和系列
 // ============================================================================

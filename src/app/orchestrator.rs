@@ -62,6 +62,14 @@ impl Orchestrator {
         Err(DownloaderError::UnsupportedPlatform(url.to_string()))
     }
 
+    fn is_batch_url(&self, url: &str) -> bool {
+        // Check if URL is a batch download type (favorites, space, medialist, series)
+        url.contains("favlist") 
+            || (url.contains("space.bilibili.com") && !url.contains("/video/"))
+            || url.contains("medialist")
+            || url.contains("seriesdetail")
+    }
+
     pub async fn run(&self, cli: Cli) -> Result<()> {
         tracing::info!("Starting download for URL: {}", cli.url);
 
@@ -72,7 +80,63 @@ impl Orchestrator {
         // Build auth
         let auth = self.build_auth(&cli);
 
-        // Parse video info
+        // Check if this is a batch download URL (for bilibili)
+        let is_batch = self.is_batch_url(&cli.url);
+        
+        if is_batch {
+            // Handle batch download
+            if let Some(bilibili) = platform.as_any().downcast_ref::<BilibiliPlatform>() {
+                let videos = bilibili.parse_video_batch(&cli.url, auth.as_ref()).await?;
+                
+                if videos.is_empty() {
+                    return Err(DownloaderError::Parse("No videos found in batch".to_string()));
+                }
+                
+                println!("\n📦 Batch download: {} video(s) found", videos.len());
+                
+                if cli.info_only {
+                    for (idx, video) in videos.iter().enumerate() {
+                        println!("\n[{}/{}]", idx + 1, videos.len());
+                        self.display_video_info(video);
+                    }
+                    return Ok(());
+                }
+                
+                // Build stream preferences
+                let preferences = StreamPreferences {
+                    quality_priority: cli.parse_quality_priority(),
+                    codec_priority: cli.parse_codec_priority(),
+                };
+                
+                // Download each video in the batch
+                for (idx, video_info) in videos.iter().enumerate() {
+                    println!("\n[{}/{}] Processing: {}", idx + 1, videos.len(), video_info.title);
+                    
+                    // Determine which pages to download
+                    let pages_to_download = self.select_pages(video_info, &cli)?;
+                    
+                    // Download each page
+                    for page in pages_to_download {
+                        self.process_page(
+                            video_info,
+                            &page,
+                            &preferences,
+                            &cli,
+                            platform,
+                            auth.as_ref(),
+                        )
+                        .await?;
+                    }
+                }
+                
+                self.progress.finish_all();
+                println!("\n✓ All {} video(s) downloaded successfully!", videos.len());
+                
+                return Ok(());
+            }
+        }
+
+        // Single video download (original logic)
         let video_info = platform.parse_video(&cli.url, auth.as_ref()).await?;
 
         // Display video info
