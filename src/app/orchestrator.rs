@@ -243,6 +243,26 @@ impl Orchestrator {
     ) -> Result<()> {
         println!("\n📥 Downloading: P{} - {}", page.number, page.title);
 
+        // Get chapters early (before downloading)
+        let chapters = match parser::fetch_chapters(
+            &self.http_client,
+            &video_info.aid.to_string(),
+            &page.cid,
+        )
+        .await
+        {
+            Ok(chapters) => {
+                if !chapters.is_empty() {
+                    tracing::debug!("Found {} chapter(s)", chapters.len());
+                }
+                chapters
+            }
+            Err(e) => {
+                tracing::debug!("Failed to fetch chapters: {}", e);
+                Vec::new()
+            }
+        };
+
         // Get streams (use aid for bilibili API)
         let streams = platform
             .get_streams(&video_info.aid.to_string(), &page.cid, auth)
@@ -341,22 +361,6 @@ impl Orchestrator {
             }
         } else {
             None
-        };
-
-        // Get chapters
-        let chapters = if let Ok(chapters) = parser::fetch_chapters(
-            &self.http_client,
-            &video_info.aid.to_string(),
-            &page.cid,
-        )
-        .await
-        {
-            if !chapters.is_empty() {
-                println!("  ✓ Found {} chapter(s)", chapters.len());
-            }
-            chapters
-        } else {
-            Vec::new()
         };
 
         // Determine output path
