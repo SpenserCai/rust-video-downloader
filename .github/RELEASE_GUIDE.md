@@ -37,7 +37,6 @@
 
 **Linux:**
 - `rvd-{version}-x86_64-unknown-linux-gnu.tar.gz` (x86_64)
-- `rvd-{version}-aarch64-unknown-linux-gnu.tar.gz` (ARM64)
 
 **macOS:**
 - `rvd-{version}-x86_64-apple-darwin.tar.gz` (Intel)
@@ -109,9 +108,9 @@
 
 ### 跨平台编译问题
 
-- Linux ARM64: 需要安装交叉编译工具链
 - macOS: 需要在 macOS runner 上构建
 - Windows: 使用 MSVC 工具链
+- Linux: 使用 GNU 工具链
 
 ## 手动发布（备用方案）
 
@@ -121,7 +120,6 @@
 # 构建所有平台（需要相应的工具链）
 cargo build --release --target x86_64-pc-windows-msvc
 cargo build --release --target x86_64-unknown-linux-gnu
-cargo build --release --target aarch64-unknown-linux-gnu
 cargo build --release --target x86_64-apple-darwin
 cargo build --release --target aarch64-apple-darwin
 
