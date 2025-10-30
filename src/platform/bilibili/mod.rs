@@ -1,5 +1,5 @@
 mod api;
-mod parser;
+pub mod parser;
 pub mod selector;
 
 use crate::error::{DownloaderError, Result};
@@ -30,17 +30,15 @@ pub enum VideoType {
     Episode(String),
     Season(String),
     Cheese(String),
-    #[allow(dead_code)]
     FavoriteList(String),
-    #[allow(dead_code)]
     SpaceVideo(String),
-    #[allow(dead_code)]
     MediaList(String),
-    #[allow(dead_code)]
     SeriesList(String),
 }
 
 impl BilibiliPlatform {
+    /// 创建使用Web API模式的BilibiliPlatform实例（主要用于测试）
+    #[allow(dead_code)]
     pub fn new() -> Result<Self> {
         Self::with_api_mode(ApiMode::Web)
     }
@@ -50,11 +48,6 @@ impl BilibiliPlatform {
             client: Arc::new(HttpClient::new()?),
             api_mode,
         })
-    }
-
-    #[allow(dead_code)]
-    pub fn api_mode(&self) -> ApiMode {
-        self.api_mode
     }
 
     fn parse_url(&self, url: &str) -> Result<VideoType> {

@@ -32,18 +32,34 @@ pub async fn parse_video_info(
         VideoType::Episode(ep) => fetch_bangumi_info_by_ep(client, &ep, auth).await,
         VideoType::Season(ss) => fetch_bangumi_info_by_ss(client, &ss, auth).await,
         VideoType::Cheese(ep) => fetch_cheese_info(client, &ep, auth).await,
-        VideoType::FavoriteList(_) => Err(DownloaderError::Parse(
-            "Favorite list support not yet implemented".to_string(),
-        )),
-        VideoType::SpaceVideo(_) => Err(DownloaderError::Parse(
-            "Space video support not yet implemented".to_string(),
-        )),
-        VideoType::MediaList(_) => Err(DownloaderError::Parse(
-            "Media list support not yet implemented".to_string(),
-        )),
-        VideoType::SeriesList(_) => Err(DownloaderError::Parse(
-            "Series list support not yet implemented".to_string(),
-        )),
+        VideoType::FavoriteList(fav_info) => {
+            // 批量下载收藏夹：返回第一个视频的信息，实际应该在orchestrator中处理批量
+            let videos = fetch_favorite_list(client, &fav_info, auth).await?;
+            videos.into_iter().next().ok_or_else(|| {
+                DownloaderError::Parse("Favorite list is empty".to_string())
+            })
+        }
+        VideoType::SpaceVideo(mid) => {
+            // 批量下载UP主空间：返回第一个视频的信息
+            let videos = fetch_space_videos(client, &mid, auth).await?;
+            videos.into_iter().next().ok_or_else(|| {
+                DownloaderError::Parse("Space has no videos".to_string())
+            })
+        }
+        VideoType::MediaList(media_id) => {
+            // 批量下载合集：返回第一个视频的信息
+            let videos = fetch_media_list(client, &media_id, auth).await?;
+            videos.into_iter().next().ok_or_else(|| {
+                DownloaderError::Parse("Media list is empty".to_string())
+            })
+        }
+        VideoType::SeriesList(series_info) => {
+            // 批量下载系列：返回第一个视频的信息
+            let videos = fetch_series_list(client, &series_info, auth).await?;
+            videos.into_iter().next().ok_or_else(|| {
+                DownloaderError::Parse("Series list is empty".to_string())
+            })
+        }
     }
 }
 
@@ -499,7 +515,6 @@ fn convert_cheese_to_video_info(data: CheeseInfoData) -> Result<VideoInfo> {
 }
 
 // 收藏夹信息获取
-#[allow(dead_code)]
 pub async fn fetch_favorite_list(
     client: &Arc<HttpClient>,
     fav_info: &str,
@@ -523,10 +538,6 @@ pub async fn fetch_favorite_list(
         let response = client.get_with_auth(&api, auth).await?;
         let json_text = response.text().await?;
 
-        #[derive(Deserialize)]
-        struct FavListResponse {
-            data: FavListData,
-        }
         #[derive(Deserialize)]
         struct FavListData {
             list: Vec<FavItem>,
@@ -666,7 +677,6 @@ pub async fn fetch_favorite_list(
 }
 
 // UP主空间视频获取
-#[allow(dead_code)]
 pub async fn fetch_space_videos(
     client: &Arc<HttpClient>,
     mid: &str,
@@ -746,7 +756,6 @@ pub async fn fetch_space_videos(
 }
 
 // 合集视频获取
-#[allow(dead_code)]
 pub async fn fetch_media_list(
     client: &Arc<HttpClient>,
     media_id: &str,
@@ -786,7 +795,6 @@ pub async fn fetch_media_list(
 }
 
 // 系列视频获取
-#[allow(dead_code)]
 pub async fn fetch_series_list(
     client: &Arc<HttpClient>,
     series_info: &str,
@@ -861,7 +869,6 @@ pub async fn fetch_series_list(
 }
 
 // 获取章节信息
-#[allow(dead_code)]
 pub async fn fetch_chapters(
     client: &Arc<HttpClient>,
     aid: &str,
@@ -879,6 +886,7 @@ pub async fn fetch_chapters(
 
     // 尝试解析章节信息
     #[derive(Deserialize)]
+    #[allow(dead_code)]
     struct ChapterResponse {
         data: Option<ChapterData>,
     }

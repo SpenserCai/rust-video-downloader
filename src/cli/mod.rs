@@ -149,7 +149,6 @@ impl Cli {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_api_mode(&self) -> crate::platform::bilibili::ApiMode {
         use crate::platform::bilibili::ApiMode;
         
@@ -164,7 +163,6 @@ impl Cli {
         }
     }
 
-    #[allow(dead_code)]
     pub fn get_danmaku_format(&self) -> crate::core::danmaku::DanmakuFormat {
         use crate::core::danmaku::DanmakuFormat;
         

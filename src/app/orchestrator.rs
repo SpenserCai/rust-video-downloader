@@ -1,9 +1,11 @@
 use crate::cli::Cli;
+use crate::core::danmaku;
 use crate::core::downloader::Downloader;
 use crate::core::muxer::Muxer;
 use crate::core::progress::ProgressTracker;
 use crate::core::subtitle;
 use crate::error::{DownloaderError, Result};
+use crate::platform::bilibili::parser;
 use crate::platform::bilibili::selector::select_best_streams;
 use crate::platform::bilibili::BilibiliPlatform;
 use crate::platform::Platform;
@@ -34,7 +36,11 @@ impl Orchestrator {
             }))?);
         let progress = Arc::new(ProgressTracker::new());
 
-        let platforms: Vec<Box<dyn Platform>> = vec![Box::new(BilibiliPlatform::new()?)];
+        // 根据CLI参数选择API模式
+        let api_mode = cli.get_api_mode();
+        let platforms: Vec<Box<dyn Platform>> = vec![
+            Box::new(BilibiliPlatform::with_api_mode(api_mode)?)
+        ];
 
         Ok(Self {
             platforms,
@@ -297,6 +303,27 @@ impl Orchestrator {
             }
         }
 
+        // Download danmaku
+        if cli.download_danmaku {
+            let danmaku_format = cli.get_danmaku_format();
+            let danmaku_ext = match danmaku_format {
+                danmaku::DanmakuFormat::Xml => "xml",
+                danmaku::DanmakuFormat::Ass => "ass",
+            };
+            let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
+            
+            if let Ok(()) = danmaku::download_danmaku(
+                &self.http_client,
+                &page.cid,
+                &danmaku_path,
+                danmaku_format,
+            )
+            .await
+            {
+                println!("  ✓ Danmaku downloaded");
+            }
+        }
+
         // Download cover
         let _cover_path = if !cli.skip_cover {
             let cover_url = platform.get_cover(video_info);
@@ -314,6 +341,22 @@ impl Orchestrator {
             }
         } else {
             None
+        };
+
+        // Get chapters
+        let chapters = if let Ok(chapters) = parser::fetch_chapters(
+            &self.http_client,
+            &video_info.aid.to_string(),
+            &page.cid,
+        )
+        .await
+        {
+            if !chapters.is_empty() {
+                println!("  ✓ Found {} chapter(s)", chapters.len());
+            }
+            chapters
+        } else {
+            Vec::new()
         };
 
         // Determine output path
@@ -343,10 +386,10 @@ impl Orchestrator {
             tokio::fs::copy(&audio_path, &audio_out).await?;
             println!("  ✓ Files saved (muxing skipped)");
         } else {
-            // Mux video and audio
+            // Mux video and audio with chapters
             println!("  🔄 Muxing...");
             self.muxer
-                .mux(&video_path, &audio_path, &output_path, &subtitle_paths)
+                .mux_with_chapters(&video_path, &audio_path, &output_path, &subtitle_paths, &chapters)
                 .await?;
             println!("  ✓ Muxed to: {}", output_path.display());
         }

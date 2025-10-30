@@ -4,7 +4,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 /// 弹幕格式
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum DanmakuFormat {
     Xml,
@@ -12,7 +11,6 @@ pub enum DanmakuFormat {
 }
 
 /// 下载弹幕
-#[allow(dead_code)]
 pub async fn download_danmaku(
     client: &Arc<HttpClient>,
     cid: &str,
@@ -47,7 +45,6 @@ pub async fn download_danmaku(
 }
 
 /// 解析 XML 弹幕
-#[allow(dead_code)]
 fn parse_danmaku_xml(xml: &str) -> Result<Vec<DanmakuItem>> {
     let mut items = Vec::new();
 
@@ -81,7 +78,6 @@ fn parse_danmaku_xml(xml: &str) -> Result<Vec<DanmakuItem>> {
 }
 
 /// 转换 XML 弹幕为 ASS 格式
-#[allow(dead_code)]
 fn convert_xml_to_ass(xml: &str) -> Result<String> {
     let items = parse_danmaku_xml(xml)?;
 
@@ -131,7 +127,6 @@ fn convert_xml_to_ass(xml: &str) -> Result<String> {
 }
 
 /// 格式化时间为 ASS 格式 (H:MM:SS.CC)
-#[allow(dead_code)]
 fn format_ass_time(seconds: f64) -> String {
     let hours = (seconds / 3600.0) as u32;
     let minutes = ((seconds % 3600.0) / 60.0) as u32;
@@ -142,12 +137,11 @@ fn format_ass_time(seconds: f64) -> String {
 }
 
 /// 弹幕项
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 struct DanmakuItem {
     time: f64,
     mode: u32,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // 保留用于未来扩展
     font_size: u32,
     color: u32,
     text: String,
