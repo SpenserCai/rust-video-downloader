@@ -139,8 +139,10 @@ impl Orchestrator {
         println!("  Uploader: {}", video_info.uploader);
         println!("  Pages: {}", video_info.pages.len());
         if !video_info.description.is_empty() {
-            let desc = if video_info.description.len() > 100 {
-                format!("{}...", &video_info.description[..100])
+            // 安全地截断字符串，考虑 UTF-8 字符边界
+            let desc = if video_info.description.chars().count() > 100 {
+                let truncated: String = video_info.description.chars().take(100).collect();
+                format!("{}...", truncated)
             } else {
                 video_info.description.clone()
             };
@@ -374,13 +376,26 @@ impl Orchestrator {
 
         // Determine output path
         let output_path = if let Some(ref output) = cli.output {
-            PathBuf::from(file::parse_template(
+            let parsed = file::parse_template(
                 output,
                 video_info,
                 Some(page),
                 &video_stream.quality,
                 &video_stream.codec,
-            ))
+            );
+            let path = PathBuf::from(&parsed);
+            
+            // If the path is a directory or doesn't have an extension, add a filename
+            if path.is_dir() || path.extension().is_none() {
+                let filename = if video_info.pages.len() > 1 {
+                    format!("P{:02}_{}.mp4", page.number, file::sanitize_filename(&page.title))
+                } else {
+                    format!("{}.mp4", file::sanitize_filename(&video_info.title))
+                };
+                path.join(filename)
+            } else {
+                path
+            }
         } else {
             file::get_default_output_path(video_info, Some(page))
         };

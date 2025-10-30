@@ -7,6 +7,14 @@ pub struct ApiResponse<T> {
     pub data: Option<T>,
 }
 
+// 番剧API使用 result 字段而不是 data
+#[derive(Debug, Deserialize)]
+pub struct BangumiApiResponse<T> {
+    pub code: i32,
+    pub message: String,
+    pub result: Option<T>,
+}
+
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct VideoInfoData {

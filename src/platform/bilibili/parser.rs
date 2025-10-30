@@ -349,7 +349,7 @@ async fn fetch_bangumi_info_by_ep(
 
     tracing::debug!("Bangumi info response: {}", json_text);
 
-    let api_response: ApiResponse<BangumiInfoData> = serde_json::from_str(&json_text)
+    let api_response: super::api::BangumiApiResponse<BangumiInfoData> = serde_json::from_str(&json_text)
         .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi info: {}", e)))?;
 
     if api_response.code != 0 {
@@ -360,7 +360,7 @@ async fn fetch_bangumi_info_by_ep(
     }
 
     let data = api_response
-        .data
+        .result
         .ok_or_else(|| DownloaderError::VideoNotFound(format!("ep{}", ep_id)))?;
 
     convert_bangumi_to_video_info(data, ep_id)
@@ -378,7 +378,7 @@ async fn fetch_bangumi_info_by_ss(
 
     tracing::debug!("Bangumi info response: {}", json_text);
 
-    let api_response: ApiResponse<BangumiInfoData> = serde_json::from_str(&json_text)
+    let api_response: super::api::BangumiApiResponse<BangumiInfoData> = serde_json::from_str(&json_text)
         .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi info: {}", e)))?;
 
     if api_response.code != 0 {
@@ -389,7 +389,7 @@ async fn fetch_bangumi_info_by_ss(
     }
 
     let data = api_response
-        .data
+        .result
         .ok_or_else(|| DownloaderError::VideoNotFound(format!("ss{}", season_id)))?;
 
     convert_bangumi_to_video_info(data, "")
