@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 显示修复
 - 修复Windows 10上ANSI显示异常的问题
+- 修复Windows 10上Emoji显示异常问题（类似git的编码切换的方法）
 
 ## [0.2.5] - 2025-10-31
 

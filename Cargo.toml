@@ -70,8 +70,9 @@ quick-xml = "0.31"
 qrcode = "0.14"
 image = "0.25"
 
-# Windows ANSI support
+# Windows console support (UTF-8 and ANSI)
 [target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["consoleapi"] }
 nu-ansi-term = "0.50"
 
 [dev-dependencies]

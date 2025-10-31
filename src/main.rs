@@ -16,6 +16,10 @@ use utils::config::Config;
 
 #[tokio::main]
 async fn main() {
+    // Initialize console with UTF-8 support on Windows
+    // The original code page will be automatically restored on exit
+    let _console_guard = utils::console::ConsoleGuard::new();
+
     let exit_code = match run().await {
         Ok(()) => 0,
         Err(e) => {
@@ -108,12 +112,6 @@ async fn handle_login(cli: &Cli) -> Result<crate::types::Auth, DownloaderError> 
 }
 
 fn init_logging(verbose: bool) {
-    // Enable ANSI support on Windows
-    #[cfg(windows)]
-    {
-        let _ = nu_ansi_term::enable_ansi_support();
-    }
-
     let filter = if verbose {
         EnvFilter::new("rvd=debug,info")
     } else {
