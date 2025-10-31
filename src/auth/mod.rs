@@ -10,7 +10,10 @@
 //!
 //! 提供平台无关的认证功能，支持多种登录方式
 
+pub mod login;
 pub mod providers;
+pub mod qrcode;
+pub mod storage;
 pub mod types;
 
 pub use types::{AuthError, Credentials, LoginStatus, QRCodeData};

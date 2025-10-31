@@ -21,10 +21,18 @@ pub struct Config {
     pub paths: Option<PathsConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
 pub struct AuthConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cookie: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub access_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mid: Option<u64>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
