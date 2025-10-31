@@ -25,6 +25,8 @@ fn test_parse_quality_priority_default() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let quality = cli.parse_quality_priority();
@@ -55,6 +57,8 @@ fn test_parse_quality_priority_custom() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let quality = cli.parse_quality_priority();
@@ -85,6 +89,8 @@ fn test_parse_codec_priority_default() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let codec = cli.parse_codec_priority();
@@ -115,6 +121,8 @@ fn test_parse_codec_priority_custom() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let codec = cli.parse_codec_priority();
@@ -145,6 +153,8 @@ fn test_parse_pages_none() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let pages = cli.parse_pages();
@@ -175,6 +185,8 @@ fn test_parse_pages_all() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let pages = cli.parse_pages();
@@ -205,6 +217,8 @@ fn test_parse_pages_single() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let pages = cli.parse_pages();
@@ -235,6 +249,8 @@ fn test_parse_pages_multiple() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let pages = cli.parse_pages();
@@ -265,6 +281,8 @@ fn test_parse_pages_range() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let pages = cli.parse_pages();
@@ -295,6 +313,8 @@ fn test_parse_pages_mixed() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let pages = cli.parse_pages();
@@ -326,6 +346,8 @@ fn test_cli_api_mode_tv() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert!(cli.use_tv_api);
@@ -357,6 +379,8 @@ fn test_cli_api_mode_app() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert!(cli.use_app_api);
@@ -388,6 +412,8 @@ fn test_cli_api_mode_international() {
         use_intl_api: true,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert!(cli.use_intl_api);
@@ -420,6 +446,8 @@ fn test_cli_danmaku_download() {
         use_intl_api: false,
         download_danmaku: true,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert!(cli.download_danmaku);
@@ -449,6 +477,8 @@ fn test_cli_danmaku_format_xml() {
         use_intl_api: false,
         download_danmaku: true,
         danmaku_format: "xml".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert_eq!(cli.danmaku_format, "xml");
@@ -480,6 +510,8 @@ fn test_cli_danmaku_format_ass() {
         use_intl_api: false,
         download_danmaku: true,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert_eq!(cli.danmaku_format, "ass");
@@ -512,6 +544,8 @@ fn test_cli_interactive_flag() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
     
     assert!(cli.interactive);

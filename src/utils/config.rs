@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Deserialize, Default)]
-#[allow(dead_code)]
+#[allow(dead_code)] // Some fields are reserved for future use
 pub struct Config {
     #[serde(default)]
     pub default_quality: Option<Vec<String>>,

@@ -3,7 +3,7 @@ use thiserror::Error;
 
 /// 登录方式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
+#[allow(dead_code)] // Reserved for future login methods
 pub enum LoginMethod {
     /// 二维码登录
     QRCode,
@@ -12,7 +12,6 @@ pub enum LoginMethod {
 
 /// 登录凭证（平台无关）
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct Credentials {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cookie: Option<String>,
@@ -28,7 +27,6 @@ pub struct Credentials {
 
 /// 二维码数据
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct QRCodeData {
     pub url: String,
     pub key: String, // qrcode_key 或 auth_code
@@ -36,7 +34,6 @@ pub struct QRCodeData {
 
 /// 登录状态
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub enum LoginStatus {
     /// 等待扫码
     Pending,
@@ -52,7 +49,7 @@ pub enum LoginStatus {
 
 /// 认证错误类型
 #[derive(Debug, Error)]
-#[allow(dead_code)]
+#[allow(dead_code)] // RefreshNotSupported is reserved for future use
 pub enum AuthError {
     #[error("QR code expired")]
     QRCodeExpired,

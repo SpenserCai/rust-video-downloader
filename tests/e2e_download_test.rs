@@ -236,6 +236,8 @@ async fn test_32_2_download_bangumi_single_episode() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -511,6 +513,8 @@ async fn test_32_6_download_with_tv_api() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -574,6 +578,8 @@ async fn test_32_7_download_danmaku_xml() {
         use_intl_api: false,
         download_danmaku: true, // 下载弹幕
         danmaku_format: "xml".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -630,6 +636,8 @@ async fn test_32_7_download_danmaku_ass() {
         use_intl_api: false,
         download_danmaku: true,
         danmaku_format: "ass".to_string(), // ASS格式
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -728,6 +736,8 @@ async fn test_32_8_download_with_chapters() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -788,6 +798,8 @@ async fn test_32_9_interactive_mode_disabled() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -851,6 +863,8 @@ async fn test_complete_download_workflow() {
         use_intl_api: false,
         download_danmaku: true, // 下载弹幕
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -922,6 +936,8 @@ async fn test_multi_page_download() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -991,6 +1007,8 @@ async fn test_info_only_mode() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {

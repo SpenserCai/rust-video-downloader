@@ -18,12 +18,10 @@ use std::path::Path;
 use std::time::Duration;
 
 /// 登录管理器
-#[allow(dead_code)]
 pub struct LoginManager {
     provider: Box<dyn AuthProvider>,
 }
 
-#[allow(dead_code)]
 impl LoginManager {
     /// 创建登录管理器
     ///

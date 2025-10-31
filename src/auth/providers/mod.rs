@@ -7,7 +7,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub use bilibili::BilibiliAuthProvider;
 
 /// APP签名管理器（用于TV/APP端API）
-#[allow(dead_code)]
 pub struct AppSignManager {
     appkey: String,
     appsec: String,
@@ -15,7 +14,6 @@ pub struct AppSignManager {
 
 impl AppSignManager {
     /// 创建TV端签名管理器
-    #[allow(dead_code)]
     pub fn new_tv() -> Self {
         Self {
             appkey: "4409e2ce8ffd12b8".to_string(),
@@ -39,7 +37,6 @@ impl AppSignManager {
     /// # Returns
     ///
     /// 返回MD5签名字符串（小写十六进制）
-    #[allow(dead_code)]
     pub fn sign_params(&self, params: &HashMap<String, String>) -> String {
         // 1. 按key排序（使用BTreeMap自动排序）
         let sorted_params: std::collections::BTreeMap<&String, &String> =
@@ -61,7 +58,6 @@ impl AppSignManager {
     }
 
     /// 获取当前Unix时间戳（秒）
-    #[allow(dead_code)]
     pub fn get_timestamp(&self) -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -70,7 +66,6 @@ impl AppSignManager {
     }
 
     /// 获取appkey
-    #[allow(dead_code)]
     pub fn appkey(&self) -> &str {
         &self.appkey
     }

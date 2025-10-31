@@ -17,10 +17,8 @@ use crate::utils::config::AuthConfig;
 use std::path::Path;
 
 /// 凭证存储管理器
-#[allow(dead_code)]
 pub struct CredentialStorage;
 
-#[allow(dead_code)]
 impl CredentialStorage {
     /// 将凭证写入独立的auth.toml文件
     ///

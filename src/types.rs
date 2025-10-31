@@ -58,6 +58,15 @@ pub struct Auth {
     pub access_token: Option<String>,
 }
 
+impl From<&crate::utils::config::AuthConfig> for Auth {
+    fn from(config: &crate::utils::config::AuthConfig) -> Self {
+        Self {
+            cookie: config.cookie.clone(),
+            access_token: config.access_token.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct StreamPreferences {
     pub quality_priority: Vec<String>,

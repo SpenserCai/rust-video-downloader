@@ -1,0 +1,22 @@
+# 认证凭证文件示例
+# 警告：此文件包含敏感信息，请勿分享或提交到版本控制系统
+# 
+# 使用方法：
+# 1. 复制此文件为 auth.toml
+# 2. 使用 --login-qrcode 或 --login-tv 命令登录，凭证会自动保存
+# 3. 或者手动填写以下字段
+
+# Web端登录获取的Cookie（包含SESSDATA等）
+# cookie = "SESSDATA=xxx; bili_jct=xxx; DedeUserID=xxx; DedeUserID__ckMd5=xxx; sid=xxx"
+
+# TV/APP端登录获取的访问令牌
+# access_token = "your_access_token_here"
+
+# 刷新令牌（用于更新access_token）
+# refresh_token = "your_refresh_token_here"
+
+# 令牌过期时间（Unix时间戳）
+# expires_at = 1234567890
+
+# 用户ID
+# mid = 123456

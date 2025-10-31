@@ -3,7 +3,7 @@
  * @Date: 2025-10-31 11:13:33
  * @version: 
  * @LastEditors: SpenserCai
- * @LastEditTime: 2025-10-31 11:38:20
+ * @LastEditTime: 2025-10-31 14:03:16
  * @Description: file content
  */
 //! 认证模块
@@ -18,9 +18,6 @@ pub mod types;
 
 pub use types::{AuthError, Credentials, LoginStatus, QRCodeData};
 
-#[allow(unused_imports)]
-pub use types::LoginMethod;
-
 use async_trait::async_trait;
 use crate::error::Result;
 
@@ -28,7 +25,6 @@ use crate::error::Result;
 ///
 /// 所有平台的认证实现都必须实现此trait
 #[async_trait]
-#[allow(dead_code)]
 pub trait AuthProvider: Send + Sync {
     /// 申请二维码
     ///
@@ -57,6 +53,7 @@ pub trait AuthProvider: Send + Sync {
     /// # Returns
     ///
     /// 返回新的凭证
+    #[allow(dead_code)] // Reserved for future use
     async fn refresh_credentials(&self, _refresh_token: &str) -> Result<Credentials> {
         Err(crate::error::DownloaderError::Auth(
             AuthError::RefreshNotSupported,

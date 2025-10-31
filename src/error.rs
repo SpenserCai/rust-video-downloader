@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-#[allow(dead_code)]
+#[allow(dead_code)] // Some variants are reserved for future use
 pub enum DownloaderError {
     #[error("Network error: {0}")]
     Network(#[from] reqwest::Error),

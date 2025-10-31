@@ -197,6 +197,8 @@ fn test_orchestrator_creation() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let config = Config::default();
@@ -275,6 +277,8 @@ async fn test_info_only_mode() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let config = Config::default();
@@ -330,6 +334,8 @@ async fn test_multi_page_selection() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
             };
 
             let parsed_pages = cli.parse_pages();

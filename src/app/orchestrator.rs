@@ -177,15 +177,31 @@ impl Orchestrator {
     }
 
     fn build_auth(&self, cli: &Cli) -> Option<Auth> {
+        // Priority: CLI parameters > auth.toml > config.toml
+        
+        // Try to load from auth.toml if config file is specified
+        let auth_from_file = if let Some(ref config_path) = cli.config_file {
+            use crate::auth::storage::CredentialStorage;
+            CredentialStorage::load_from_config(config_path)
+                .ok()
+                .flatten()
+                .map(|creds| CredentialStorage::to_auth(&creds))
+        } else {
+            None
+        };
+
+        // Build final auth with priority
         let cookie = cli
             .cookie
             .clone()
-            .or_else(|| self.config.auth.as_ref()?.cookie.clone());
+            .or_else(|| auth_from_file.as_ref().and_then(|a| a.cookie.clone()))
+            .or_else(|| self.config.auth.as_ref().and_then(|a| a.cookie.clone()));
 
         let access_token = cli
             .access_token
             .clone()
-            .or_else(|| self.config.auth.as_ref()?.access_token.clone());
+            .or_else(|| auth_from_file.as_ref().and_then(|a| a.access_token.clone()))
+            .or_else(|| self.config.auth.as_ref().and_then(|a| a.access_token.clone()));
 
         if cookie.is_some() || access_token.is_some() {
             Some(Auth {

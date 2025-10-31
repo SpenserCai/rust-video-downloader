@@ -89,6 +89,14 @@ pub struct Cli {
     /// Danmaku format (xml or ass)
     #[arg(long, default_value = "ass")]
     pub danmaku_format: String,
+
+    /// Login using QR code (Web mode)
+    #[arg(long, conflicts_with = "login_tv")]
+    pub login_qrcode: bool,
+
+    /// Login using QR code (TV mode, gets access_token)
+    #[arg(long, conflicts_with = "login_qrcode")]
+    pub login_tv: bool,
 }
 
 impl Cli {
@@ -170,6 +178,24 @@ impl Cli {
             "xml" => DanmakuFormat::Xml,
             "ass" => DanmakuFormat::Ass,
             _ => DanmakuFormat::Ass,
+        }
+    }
+
+    /// Check if login is requested
+    pub fn needs_login(&self) -> bool {
+        self.login_qrcode || self.login_tv
+    }
+
+    /// Get the API mode for login (if login is requested)
+    pub fn get_login_api_mode(&self) -> Option<crate::platform::bilibili::ApiMode> {
+        use crate::platform::bilibili::ApiMode;
+        
+        if self.login_tv {
+            Some(ApiMode::TV)
+        } else if self.login_qrcode {
+            Some(ApiMode::Web)
+        } else {
+            None
         }
     }
 }

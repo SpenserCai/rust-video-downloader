@@ -12,7 +12,6 @@ use std::sync::Arc;
 use super::AppSignManager;
 
 /// 哔哩哔哩认证提供者
-#[allow(dead_code)]
 pub struct BilibiliAuthProvider {
     client: Arc<HttpClient>,
     api_mode: ApiMode,
@@ -21,7 +20,6 @@ pub struct BilibiliAuthProvider {
 
 impl BilibiliAuthProvider {
     /// 创建新的哔哩哔哩认证提供者
-    #[allow(dead_code)]
     ///
     /// # Arguments
     ///
@@ -43,7 +41,6 @@ impl BilibiliAuthProvider {
     /// Web端申请二维码
     ///
     /// API: https://passport.bilibili.com/x/passport-login/web/qrcode/generate
-    #[allow(dead_code)]
     async fn request_web_qrcode(&self) -> Result<QRCodeData> {
         tracing::debug!("Requesting Web QR code");
 
@@ -95,7 +92,6 @@ impl BilibiliAuthProvider {
     /// Web端轮询登录状态
     ///
     /// API: https://passport.bilibili.com/x/passport-login/web/qrcode/poll
-    #[allow(dead_code)]
     async fn poll_web_login(&self, qrcode_key: &str) -> Result<LoginStatus> {
         let url = format!(
             "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key={}",
@@ -175,7 +171,6 @@ impl BilibiliAuthProvider {
     /// # Returns
     ///
     /// 返回拼接好的Cookie字符串
-    #[allow(dead_code)]
     fn extract_cookies_from_response(&self, response: &Response) -> Result<String> {
         let mut cookie_map: HashMap<String, String> = HashMap::new();
 
@@ -215,7 +210,6 @@ impl BilibiliAuthProvider {
     /// TV端申请二维码
     ///
     /// API: https://passport.snm0516.aisee.tv/x/passport-tv-login/qrcode/auth_code
-    #[allow(dead_code)]
     async fn request_tv_qrcode(&self) -> Result<QRCodeData> {
         tracing::debug!("Requesting TV QR code");
 
@@ -300,7 +294,6 @@ impl BilibiliAuthProvider {
     ///
     /// API: https://passport.bilibili.com/x/passport-tv-login/qrcode/poll
     /// 注意：不是snm0516域名
-    #[allow(dead_code)]
     async fn poll_tv_login(&self, auth_code: &str) -> Result<LoginStatus> {
         let sign_manager = self
             .sign_manager
@@ -382,7 +375,6 @@ impl BilibiliAuthProvider {
     /// 从TV端响应中提取Cookie和Token
     ///
     /// TV端返回结构：data.cookie_info.cookies数组 + data.access_token + data.refresh_token
-    #[allow(dead_code)]
     fn extract_tv_credentials(&self, json: &Value) -> Result<Credentials> {
         // 提取access_token
         let access_token = json["data"]["access_token"]

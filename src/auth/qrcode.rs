@@ -16,10 +16,8 @@ use qrcode::QrCode;
 use std::path::Path;
 
 /// 二维码显示器
-#[allow(dead_code)]
 pub struct QRCodeDisplay;
 
-#[allow(dead_code)]
 impl QRCodeDisplay {
     /// 在终端显示二维码（跨平台兼容）
     ///
