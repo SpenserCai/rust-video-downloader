@@ -110,11 +110,11 @@ impl QRCodeDisplay {
     ///
     /// 成功返回Ok(())，失败返回错误
     fn display_unicode_blocks(code: &QrCode) -> Result<()> {
-        tracing::info!("请使用手机扫描以下二维码：");
-        tracing::info!("");
+        println!("\n请使用手机扫描以下二维码：");
+        println!();
 
         // 添加上边距
-        tracing::info!("    {}", "██".repeat(code.width() + 2));
+        println!("    {}", "██".repeat(code.width() + 2));
 
         // 遍历二维码矩阵
         for y in 0..code.width() {
@@ -130,12 +130,12 @@ impl QRCodeDisplay {
             }
 
             line.push_str("██"); // 右边距
-            tracing::info!("{}", line);
+            println!("{}", line);
         }
 
         // 添加下边距
-        tracing::info!("    {}", "██".repeat(code.width() + 2));
-        tracing::info!("");
+        println!("    {}", "██".repeat(code.width() + 2));
+        println!();
 
         Ok(())
     }
@@ -150,12 +150,12 @@ impl QRCodeDisplay {
     ///
     /// 成功返回Ok(())，失败返回错误
     fn display_ansi_colors(code: &QrCode) -> Result<()> {
-        tracing::info!("请使用手机扫描以下二维码：");
-        tracing::info!("");
+        println!("\n请使用手机扫描以下二维码：");
+        println!();
 
         // 添加上边距（白色）
         let top_border = format!("    {}", "\x1b[47m  \x1b[0m".repeat(code.width() + 2));
-        tracing::info!("{}", top_border);
+        println!("{}", top_border);
 
         // 遍历二维码矩阵
         for y in 0..code.width() {
@@ -171,13 +171,13 @@ impl QRCodeDisplay {
             }
 
             line.push_str("\x1b[47m  \x1b[0m"); // 右边距（白色）
-            tracing::info!("{}", line);
+            println!("{}", line);
         }
 
         // 添加下边距（白色）
         let bottom_border = format!("    {}", "\x1b[47m  \x1b[0m".repeat(code.width() + 2));
-        tracing::info!("{}", bottom_border);
-        tracing::info!("");
+        println!("{}", bottom_border);
+        println!();
 
         Ok(())
     }

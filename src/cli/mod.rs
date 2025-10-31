@@ -8,7 +8,9 @@ use std::path::PathBuf;
 #[command(about = "A modular video downloader written in Rust", long_about = None)]
 pub struct Cli {
     /// Video URL to download (supports bilibili BV/av/ep/ss)
-    pub url: String,
+    /// Optional when using --login-qrcode or --login-tv
+    #[arg(required_unless_present_any = ["login_qrcode", "login_tv"])]
+    pub url: Option<String>,
 
     /// Quality priority (comma-separated, e.g., "1080P,720P,480P")
     #[arg(short = 'q', long)]

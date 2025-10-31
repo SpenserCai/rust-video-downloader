@@ -34,9 +34,16 @@ async fn run() -> Result<(), DownloaderError> {
     // Initialize logging
     init_logging(cli.verbose);
 
-    // Handle login if requested
-    if cli.needs_login() {
-        return handle_login(&cli).await;
+    // Handle login if requested and get credentials
+    let login_auth = if cli.needs_login() {
+        Some(handle_login(&cli).await?)
+    } else {
+        None
+    };
+
+    // If login was performed without a URL, just exit successfully
+    if cli.needs_login() && cli.url.is_none() {
+        return Ok(());
     }
 
     // Load configuration
@@ -46,8 +53,13 @@ async fn run() -> Result<(), DownloaderError> {
         Config::load_default()?
     };
 
-    // Create orchestrator
-    let orchestrator = Orchestrator::new(config, &cli)?;
+    // Create orchestrator with login auth if available
+    let mut orchestrator = Orchestrator::new(config, &cli)?;
+    
+    // If we have login auth, it takes priority
+    if let Some(auth) = login_auth {
+        orchestrator.set_auth(Some(auth));
+    }
 
     // Run the download
     orchestrator.run(cli).await?;
@@ -55,7 +67,7 @@ async fn run() -> Result<(), DownloaderError> {
     Ok(())
 }
 
-async fn handle_login(cli: &Cli) -> Result<(), DownloaderError> {
+async fn handle_login(cli: &Cli) -> Result<crate::types::Auth, DownloaderError> {
     use auth::login::LoginManager;
     use auth::providers::BilibiliAuthProvider;
     use auth::storage::CredentialStorage;
@@ -89,27 +101,10 @@ async fn handle_login(cli: &Cli) -> Result<(), DownloaderError> {
         tracing::info!("ℹ️  凭证仅在本次会话中有效（未指定配置文件）");
         println!("\n✓ 登录成功！");
         println!("ℹ️  提示：使用 --config-file 参数可以保存凭证以供后续使用。");
-        
-        // Display credentials for manual use
-        if let Some(ref cookie) = credentials.cookie {
-            let preview = if cookie.len() > 50 {
-                format!("{}...", &cookie[..50])
-            } else {
-                cookie.clone()
-            };
-            println!("\nCookie: {}", preview);
-        }
-        if let Some(ref token) = credentials.access_token {
-            let preview = if token.len() > 50 {
-                format!("{}...", &token[..50])
-            } else {
-                token.clone()
-            };
-            println!("Access Token: {}", preview);
-        }
     }
 
-    Ok(())
+    // Convert credentials to Auth and return
+    Ok(CredentialStorage::to_auth(&credentials))
 }
 
 fn init_logging(verbose: bool) {
