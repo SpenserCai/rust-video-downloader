@@ -2,6 +2,7 @@
 // This allows tests and other crates to use rvd as a library
 
 pub mod app;
+pub mod auth;
 pub mod cli;
 pub mod core;
 pub mod error;

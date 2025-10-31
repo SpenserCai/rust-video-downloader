@@ -41,6 +41,15 @@ pub enum DownloaderError {
 
     #[error("API error: {0}")]
     Api(String),
+
+    #[error("Authentication error: {0}")]
+    Auth(crate::auth::AuthError),
 }
 
 pub type Result<T> = std::result::Result<T, DownloaderError>;
+
+impl From<crate::auth::AuthError> for DownloaderError {
+    fn from(err: crate::auth::AuthError) -> Self {
+        DownloaderError::Auth(err)
+    }
+}

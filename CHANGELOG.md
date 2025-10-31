@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### 认证模块基础
+- 新增 `auth` 模块，提供平台无关的认证功能
+- 实现 `AuthProvider` trait，定义统一的认证接口
+- 实现 `AppSignManager`，支持TV/APP端API签名
+- 新增认证相关类型：`Credentials`, `QRCodeData`, `LoginStatus`, `AuthError`
+- 完整的签名算法实现（MD5哈希，字典序排序）
+- 新增 8 个单元测试，覆盖签名算法的各种场景
+
+### Fixed
+- 修复 `tests/core_danmaku_test.rs` 中的 clippy 警告（clone_on_copy）
+- 修复 `tests/core_chapter_test.rs` 中的 clippy 警告（useless_vec）
+- 修复 `tests/e2e_download_test.rs` 中的 clippy 警告（redundant_closure, map_or）
+
 ## [0.2.1] - 2025-10-31
 
 ### Fixed

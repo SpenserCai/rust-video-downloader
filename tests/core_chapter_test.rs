@@ -46,7 +46,7 @@ fn test_chapter_debug() {
 
 #[test]
 fn test_multiple_chapters() {
-    let chapters = vec![
+    let chapters = [
         Chapter {
             title: "片头".to_string(),
             start: 0,

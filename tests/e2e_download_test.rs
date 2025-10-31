@@ -72,7 +72,7 @@ async fn test_32_1_parse_bvid_url() {
     println!("\n=== Task 32.1: 测试 BV 号解析 ===");
 
     let config = load_test_config();
-    let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
+    let auth = config.as_ref().and_then(create_auth_from_config);
 
     let platform = BilibiliPlatform::new().unwrap();
 
@@ -94,7 +94,7 @@ async fn test_32_1_parse_avid_url() {
     println!("\n=== Task 32.1: 测试 av 号解析 ===");
 
     let config = load_test_config();
-    let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
+    let auth = config.as_ref().and_then(create_auth_from_config);
 
     let platform = BilibiliPlatform::new().unwrap();
 
@@ -115,7 +115,7 @@ async fn test_32_1_parse_multi_page_video() {
     println!("\n=== Task 32.1: 测试多分P视频解析 ===");
 
     let config = load_test_config();
-    let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
+    let auth = config.as_ref().and_then(create_auth_from_config);
 
     let platform = BilibiliPlatform::new().unwrap();
 
@@ -219,8 +219,8 @@ async fn test_32_2_download_bangumi_single_episode() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()), // 只下载第一集
         threads: 2,
         skip_subtitle: true,
@@ -230,7 +230,7 @@ async fn test_32_2_download_bangumi_single_episode() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -440,7 +440,7 @@ async fn test_32_6_tv_api_mode() {
     println!("\n=== Task 32.6: 测试 TV API 模式 ===");
 
     let config = load_test_config();
-    let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
+    let auth = config.as_ref().and_then(create_auth_from_config);
 
     use rvd::platform::bilibili::ApiMode;
     let platform = BilibiliPlatform::with_api_mode(ApiMode::TV).unwrap();
@@ -461,7 +461,7 @@ async fn test_32_6_app_api_mode() {
     println!("\n=== Task 32.6: 测试 APP API 模式 ===");
 
     let config = load_test_config();
-    let auth = config.as_ref().and_then(|c| create_auth_from_config(c));
+    let auth = config.as_ref().and_then(create_auth_from_config);
 
     use rvd::platform::bilibili::ApiMode;
     let platform = BilibiliPlatform::with_api_mode(ApiMode::App).unwrap();
@@ -494,8 +494,8 @@ async fn test_32_6_download_with_tv_api() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()),
         threads: 2,
         skip_subtitle: true,
@@ -505,7 +505,7 @@ async fn test_32_6_download_with_tv_api() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: true, // 使用TV API
         use_app_api: false,
         use_intl_api: false,
@@ -557,8 +557,8 @@ async fn test_32_7_download_danmaku_xml() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()),
         threads: 2,
         skip_subtitle: true,
@@ -568,7 +568,7 @@ async fn test_32_7_download_danmaku_xml() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -613,8 +613,8 @@ async fn test_32_7_download_danmaku_ass() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()),
         threads: 2,
         skip_subtitle: true,
@@ -624,7 +624,7 @@ async fn test_32_7_download_danmaku_ass() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -711,8 +711,8 @@ async fn test_32_8_download_with_chapters() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()),
         threads: 2,
         skip_subtitle: true,
@@ -722,7 +722,7 @@ async fn test_32_8_download_with_chapters() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -771,8 +771,8 @@ async fn test_32_9_interactive_mode_disabled() {
         quality: Some("1080P,720P".to_string()),
         codec: Some("hevc,avc".to_string()),
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()),
         threads: 2,
         skip_subtitle: true,
@@ -782,7 +782,7 @@ async fn test_32_9_interactive_mode_disabled() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -834,8 +834,8 @@ async fn test_complete_download_workflow() {
         quality: Some("1080P,720P".to_string()),
         codec: Some("avc".to_string()),
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1".to_string()),
         threads: 4,
         skip_subtitle: false, // 下载字幕
@@ -845,7 +845,7 @@ async fn test_complete_download_workflow() {
         config_file: None,
         verbose: true,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -905,8 +905,8 @@ async fn test_multi_page_download() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: Some("1,2".to_string()), // 下载前两个分P
         threads: 2,
         skip_subtitle: true,
@@ -916,7 +916,7 @@ async fn test_multi_page_download() {
         config_file: None,
         verbose: false,
         info_only: false,
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
@@ -939,7 +939,7 @@ async fn test_multi_page_download() {
                 if let Ok(entries) = std::fs::read_dir(&output_dir) {
                     let mp4_count = entries
                         .flatten()
-                        .filter(|e| e.path().extension().map_or(false, |ext| ext == "mp4"))
+                        .filter(|e| e.path().extension().is_some_and(|ext| ext == "mp4"))
                         .count();
                     println!("  - 生成了 {} 个视频文件", mp4_count);
                     assert!(mp4_count >= 1, "应该至少生成一个视频文件");
@@ -974,8 +974,8 @@ async fn test_info_only_mode() {
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
-        cookie: config.auth.as_ref().and_then(|a| a.cookie.clone()),
-        access_token: config.auth.as_ref().and_then(|a| a.access_token.clone()),
+        cookie: config.auth.as_ref().and_then(|a| a.cookie.as_ref().cloned()),
+        access_token: config.auth.as_ref().and_then(|a| a.access_token.as_ref().cloned()),
         pages: None,
         threads: 2,
         skip_subtitle: true,
@@ -985,7 +985,7 @@ async fn test_info_only_mode() {
         config_file: None,
         verbose: false,
         info_only: true, // 仅显示信息
-        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.clone()),
+        ffmpeg_path: config.paths.as_ref().and_then(|p| p.ffmpeg.as_ref().cloned()),
         use_tv_api: false,
         use_app_api: false,
         use_intl_api: false,
