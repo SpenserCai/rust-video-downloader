@@ -17,7 +17,6 @@ use utils::config::Config;
 #[tokio::main]
 async fn main() {
     // Initialize console with UTF-8 support on Windows
-    // The original code page will be automatically restored on exit
     let _console_guard = utils::console::ConsoleGuard::new();
 
     let exit_code = match run().await {

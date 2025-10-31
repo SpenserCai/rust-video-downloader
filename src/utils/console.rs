@@ -1,54 +1,36 @@
 //! Console utilities for cross-platform terminal support
 //!
-//! On Windows, this module manages console code pages to ensure proper UTF-8 support
-//! for emoji and Unicode characters. The original code page is automatically restored
-//! when the program exits.
+//! On Windows, this module sets the console to UTF-8 mode to ensure proper display
+//! of emoji and Unicode characters. The code page is NOT restored on exit, as modern
+//! Windows systems work better with UTF-8 as the default.
 
 #[cfg(windows)]
-pub struct ConsoleGuard {
-    original_output_cp: u32,
-    original_input_cp: u32,
-}
+pub struct ConsoleGuard;
 
 #[cfg(windows)]
 impl ConsoleGuard {
     /// Initialize console with UTF-8 support and ANSI escape sequences on Windows.
-    /// The original code page will be automatically restored when dropped.
+    ///
+    /// Note: The console code page is set to UTF-8 (65001) and is NOT restored on exit.
+    /// This is intentional and follows modern Windows best practices, as UTF-8 is the
+    /// recommended encoding for console applications on Windows 10/11.
     pub fn new() -> Self {
-        use windows_sys::Win32::System::Console::{
-            GetConsoleCP, GetConsoleOutputCP, SetConsoleCP, SetConsoleOutputCP,
-        };
+        use windows_sys::Win32::System::Console::{SetConsoleCP, SetConsoleOutputCP};
 
         unsafe {
-            // Save original code pages
-            let original_output_cp = GetConsoleOutputCP();
-            let original_input_cp = GetConsoleCP();
-
             // Switch to UTF-8 (code page 65001)
+            // We don't restore the original code page because:
+            // 1. Modern Windows (10/11) works best with UTF-8
+            // 2. Restoring can cause already-output UTF-8 text to display incorrectly
+            // 3. Most modern terminal applications expect UTF-8
             SetConsoleOutputCP(65001);
             SetConsoleCP(65001);
 
             // Enable ANSI escape sequence support
             let _ = nu_ansi_term::enable_ansi_support();
-
-            Self {
-                original_output_cp,
-                original_input_cp,
-            }
         }
-    }
-}
 
-#[cfg(windows)]
-impl Drop for ConsoleGuard {
-    fn drop(&mut self) {
-        use windows_sys::Win32::System::Console::{SetConsoleCP, SetConsoleOutputCP};
-
-        unsafe {
-            // Restore original code pages
-            SetConsoleOutputCP(self.original_output_cp);
-            SetConsoleCP(self.original_input_cp);
-        }
+        Self
     }
 }
 
