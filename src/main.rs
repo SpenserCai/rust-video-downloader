@@ -108,6 +108,12 @@ async fn handle_login(cli: &Cli) -> Result<crate::types::Auth, DownloaderError> 
 }
 
 fn init_logging(verbose: bool) {
+    // Enable ANSI support on Windows
+    #[cfg(windows)]
+    {
+        let _ = nu_ansi_term::enable_ansi_support();
+    }
+
     let filter = if verbose {
         EnvFilter::new("rvd=debug,info")
     } else {

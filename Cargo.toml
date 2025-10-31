@@ -70,6 +70,10 @@ quick-xml = "0.31"
 qrcode = "0.14"
 image = "0.25"
 
+# Windows ANSI support
+[target.'cfg(windows)'.dependencies]
+nu-ansi-term = "0.50"
+
 [dev-dependencies]
 mockito = "1.2"
 tempfile = "3.8"
