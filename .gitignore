@@ -17,6 +17,7 @@ Thumbs.db
 
 # Config files with sensitive data
 rvd.toml
+auth.toml
 
 # Downloaded files
 *.mp4

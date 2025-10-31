@@ -1,22 +1,35 @@
-# 认证凭证文件示例
-# 警告：此文件包含敏感信息，请勿分享或提交到版本控制系统
+# 认证凭证示例文件
 # 
-# 使用方法：
+# 使用说明：
 # 1. 复制此文件为 auth.toml
-# 2. 使用 --login-qrcode 或 --login-tv 命令登录，凭证会自动保存
-# 3. 或者手动填写以下字段
+# 2. 使用二维码登录自动填充凭证：
+#    rvd --login-qrcode --config-file config.toml
+#    或
+#    rvd --login-tv --config-file config.toml
+# 3. 或手动填入从浏览器获取的凭证
+#
+# 警告：此文件包含敏感信息，请勿分享或提交到版本控制系统
+# 建议将 auth.toml 添加到 .gitignore 中
 
-# Web端登录获取的Cookie（包含SESSDATA等）
-# cookie = "SESSDATA=xxx; bili_jct=xxx; DedeUserID=xxx; DedeUserID__ckMd5=xxx; sid=xxx"
+# Web端登录获取的Cookie（必需字段之一）
+# 格式：SESSDATA=xxx; bili_jct=xxx; DedeUserID=xxx; DedeUserID__ckMd5=xxx; sid=xxx
+cookie = "SESSDATA=your_sessdata_here; bili_jct=your_bili_jct_here"
 
-# TV/APP端登录获取的访问令牌
+# TV端登录获取的Access Token（可选，用于TV API）
 # access_token = "your_access_token_here"
 
-# 刷新令牌（用于更新access_token）
+# TV端登录获取的Refresh Token（可选，用于刷新access_token）
 # refresh_token = "your_refresh_token_here"
 
-# 令牌过期时间（Unix时间戳）
+# Token过期时间戳（可选，Unix时间戳，秒）
 # expires_at = 1234567890
 
-# 用户ID
+# 用户ID（可选）
 # mid = 123456
+
+# 注意事项：
+# - cookie 和 access_token 至少需要提供一个
+# - Web端登录只需要 cookie
+# - TV端登录会同时获取 cookie 和 access_token
+# - 凭证有效期通常为几个月，过期后需要重新登录
+# - Unix/Linux/macOS系统上，此文件权限会自动设置为 0600（仅所有者可读写）
