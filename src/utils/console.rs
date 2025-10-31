@@ -23,8 +23,8 @@ impl ConsoleGuard {
         use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
         use windows_sys::Win32::System::Console::{
             GetConsoleMode, GetStdHandle, SetConsoleCP, SetConsoleMode, SetConsoleOutputCP,
-            ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-            ENABLE_WRAP_AT_EOL_OUTPUT, STD_OUTPUT_HANDLE,
+            ENABLE_PROCESSED_OUTPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, ENABLE_WRAP_AT_EOL_OUTPUT,
+            STD_OUTPUT_HANDLE,
         };
 
         unsafe {
