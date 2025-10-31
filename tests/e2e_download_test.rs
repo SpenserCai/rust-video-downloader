@@ -215,7 +215,7 @@ async fn test_32_2_download_bangumi_single_episode() {
     let test_url = "https://www.bilibili.com/bangumi/play/ep691450";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -492,7 +492,7 @@ async fn test_32_6_download_with_tv_api() {
     let test_url = "BV1qt4y1X7TW";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -557,7 +557,7 @@ async fn test_32_7_download_danmaku_xml() {
     let test_url = "BV1B647zAENv"; // 使用有弹幕的视频
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -615,7 +615,7 @@ async fn test_32_7_download_danmaku_ass() {
     let test_url = "BV1uv411q7Mv";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -715,7 +715,7 @@ async fn test_32_8_download_with_chapters() {
     let test_url = "https://www.bilibili.com/bangumi/play/ep394750";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -777,7 +777,7 @@ async fn test_32_9_interactive_mode_disabled() {
     let test_url = "BV1qt4y1X7TW";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: Some("1080P,720P".to_string()),
         codec: Some("hevc,avc".to_string()),
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -842,7 +842,7 @@ async fn test_complete_download_workflow() {
     let test_url = "BV1uv411q7Mv"; // 使用有字幕和弹幕的视频
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: Some("1080P,720P".to_string()),
         codec: Some("avc".to_string()),
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -915,7 +915,7 @@ async fn test_multi_page_download() {
     let test_url = "BV1At41167aj";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),
@@ -986,7 +986,7 @@ async fn test_info_only_mode() {
     let test_url = "BV1qt4y1X7TW";
 
     let cli = Cli {
-        url: test_url.to_string(),
+        url: Some(test_url.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.to_string_lossy().to_string()),

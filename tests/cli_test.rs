@@ -4,7 +4,7 @@ use rvd::cli::Cli;
 #[test]
 fn test_parse_quality_priority_default() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -36,7 +36,7 @@ fn test_parse_quality_priority_default() {
 #[test]
 fn test_parse_quality_priority_custom() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: Some("4K 超清,1080P 高清,720P 高清".to_string()),
         codec: None,
         output: None,
@@ -68,7 +68,7 @@ fn test_parse_quality_priority_custom() {
 #[test]
 fn test_parse_codec_priority_default() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -100,7 +100,7 @@ fn test_parse_codec_priority_default() {
 #[test]
 fn test_parse_codec_priority_custom() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: Some("hevc,av1,avc".to_string()),
         output: None,
@@ -132,7 +132,7 @@ fn test_parse_codec_priority_custom() {
 #[test]
 fn test_parse_pages_none() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -164,7 +164,7 @@ fn test_parse_pages_none() {
 #[test]
 fn test_parse_pages_all() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -196,7 +196,7 @@ fn test_parse_pages_all() {
 #[test]
 fn test_parse_pages_single() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -228,7 +228,7 @@ fn test_parse_pages_single() {
 #[test]
 fn test_parse_pages_multiple() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -260,7 +260,7 @@ fn test_parse_pages_multiple() {
 #[test]
 fn test_parse_pages_range() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -292,7 +292,7 @@ fn test_parse_pages_range() {
 #[test]
 fn test_parse_pages_mixed() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx411c7mD".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx411c7mD".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -325,7 +325,7 @@ fn test_parse_pages_mixed() {
 #[test]
 fn test_cli_api_mode_tv() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -358,7 +358,7 @@ fn test_cli_api_mode_tv() {
 #[test]
 fn test_cli_api_mode_app() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -391,7 +391,7 @@ fn test_cli_api_mode_app() {
 #[test]
 fn test_cli_api_mode_international() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -425,7 +425,7 @@ fn test_cli_api_mode_international() {
 #[test]
 fn test_cli_danmaku_download() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -456,7 +456,7 @@ fn test_cli_danmaku_download() {
 #[test]
 fn test_cli_danmaku_format_xml() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -489,7 +489,7 @@ fn test_cli_danmaku_format_xml() {
 #[test]
 fn test_cli_danmaku_format_ass() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -523,7 +523,7 @@ fn test_cli_danmaku_format_ass() {
 #[test]
 fn test_cli_interactive_flag() {
     let cli = Cli {
-        url: "https://www.bilibili.com/video/BV1xx".to_string(),
+        url: Some("https://www.bilibili.com/video/BV1xx".to_string()),
         quality: None,
         codec: None,
         output: None,
