@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2025-10-31
+
+### Fixed
+
+#### 显示修复
+- 修复Windows 10上ANSI显示异常的问题
+
 ## [0.2.5] - 2025-10-31
 
 ### Added
@@ -154,6 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 模块化、可扩展的架构
 - 支持 AVC/HEVC/AV1 编码
 
+[0.2.5]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.1...v0.2.5
 [0.2.1]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.1.0...v0.2.0

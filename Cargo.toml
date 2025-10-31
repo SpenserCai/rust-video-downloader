@@ -1,6 +1,6 @@
 [package]
 name = "rvd"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 authors = ["RVD Contributors"]
 description = "A modular video downloader written in Rust"

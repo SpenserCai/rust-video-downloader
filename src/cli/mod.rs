@@ -4,7 +4,7 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "rvd")]
 #[command(author = "RVD Contributors")]
-#[command(version = "0.2.5")]
+#[command(version = "0.2.6")]
 #[command(about = "A modular video downloader written in Rust", long_about = None)]
 pub struct Cli {
     /// Video URL to download (supports bilibili BV/av/ep/ss)
