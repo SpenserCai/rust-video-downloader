@@ -335,27 +335,27 @@ impl BilibiliAuthProvider {
             AuthError::InvalidResponse(format!("Failed to parse JSON response: {}", e))
         })?;
 
-        // 检查根级别的code字段（字符串类型）
-        let code_str = json["code"]
-            .as_str()
+        // 检查根级别的code字段（数字类型）
+        let code = json["code"]
+            .as_i64()
             .ok_or_else(|| AuthError::InvalidResponse("Missing 'code' field".to_string()))?;
 
-        match code_str {
-            "0" => {
+        match code {
+            0 => {
                 // 登录成功
                 tracing::debug!("TV login successful");
                 let credentials = self.extract_tv_credentials(&json)?;
                 Ok(LoginStatus::Success(credentials))
             }
-            "86039" => {
+            86039 => {
                 // 未扫码（TV端特有）
                 Ok(LoginStatus::Pending)
             }
-            "86090" => {
+            86090 => {
                 // 已扫码未确认
                 Ok(LoginStatus::Scanned)
             }
-            "86038" => {
+            86038 => {
                 // 二维码已失效
                 Ok(LoginStatus::Expired)
             }
@@ -366,7 +366,7 @@ impl BilibiliAuthProvider {
                     .to_string();
                 Ok(LoginStatus::Failed(format!(
                     "Unexpected code {}: {}",
-                    code_str, message
+                    code, message
                 )))
             }
         }
