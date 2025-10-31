@@ -1,6 +1,6 @@
 [package]
 name = "rvd"
-version = "0.2.0"
+version = "0.2.5"
 edition = "2021"
 authors = ["RVD Contributors"]
 description = "A modular video downloader written in Rust"
@@ -65,6 +65,10 @@ md5 = "0.7"
 
 # XML processing
 quick-xml = "0.31"
+
+# QR code generation
+qrcode = "0.14"
+image = "0.25"
 
 [dev-dependencies]
 mockito = "1.2"

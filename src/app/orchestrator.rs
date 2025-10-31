@@ -24,6 +24,7 @@ pub struct Orchestrator {
     progress: Arc<ProgressTracker>,
     config: Config,
     http_client: Arc<HttpClient>,
+    override_auth: Option<Auth>,
 }
 
 impl Orchestrator {
@@ -49,7 +50,13 @@ impl Orchestrator {
             progress,
             config,
             http_client,
+            override_auth: None,
         })
+    }
+
+    /// Set authentication override (used when login is performed before download)
+    pub fn set_auth(&mut self, auth: Option<Auth>) {
+        self.override_auth = auth;
     }
 
     fn select_platform(&self, url: &str) -> Result<&dyn Platform> {
@@ -71,22 +78,26 @@ impl Orchestrator {
     }
 
     pub async fn run(&self, cli: Cli) -> Result<()> {
-        tracing::info!("Starting download for URL: {}", cli.url);
+        let url = cli.url.as_ref().ok_or_else(|| {
+            DownloaderError::Parse("No URL provided for download".to_string())
+        })?;
+        
+        tracing::info!("Starting download for URL: {}", url);
 
         // Select platform
-        let platform = self.select_platform(&cli.url)?;
+        let platform = self.select_platform(url)?;
         tracing::info!("Using platform: {}", platform.name());
 
         // Build auth
         let auth = self.build_auth(&cli);
 
         // Check if this is a batch download URL (for bilibili)
-        let is_batch = self.is_batch_url(&cli.url);
+        let is_batch = self.is_batch_url(url);
         
         if is_batch {
             // Handle batch download
             if let Some(bilibili) = platform.as_any().downcast_ref::<BilibiliPlatform>() {
-                let videos = bilibili.parse_video_batch(&cli.url, auth.as_ref()).await?;
+                let videos = bilibili.parse_video_batch(url, auth.as_ref()).await?;
                 
                 if videos.is_empty() {
                     return Err(DownloaderError::Parse("No videos found in batch".to_string()));
@@ -137,7 +148,7 @@ impl Orchestrator {
         }
 
         // Single video download (original logic)
-        let video_info = platform.parse_video(&cli.url, auth.as_ref()).await?;
+        let video_info = platform.parse_video(url, auth.as_ref()).await?;
 
         // Display video info
         self.display_video_info(&video_info);
@@ -177,15 +188,36 @@ impl Orchestrator {
     }
 
     fn build_auth(&self, cli: &Cli) -> Option<Auth> {
+        // Priority: override_auth (from login) > CLI parameters > auth.toml > config.toml
+        
+        // If we have override auth from login, use it directly
+        if self.override_auth.is_some() {
+            return self.override_auth.clone();
+        }
+        
+        // Try to load from auth.toml if config file is specified
+        let auth_from_file = if let Some(ref config_path) = cli.config_file {
+            use crate::auth::storage::CredentialStorage;
+            CredentialStorage::load_from_config(config_path)
+                .ok()
+                .flatten()
+                .map(|creds| CredentialStorage::to_auth(&creds))
+        } else {
+            None
+        };
+
+        // Build final auth with priority
         let cookie = cli
             .cookie
             .clone()
-            .or_else(|| self.config.auth.as_ref()?.cookie.clone());
+            .or_else(|| auth_from_file.as_ref().and_then(|a| a.cookie.clone()))
+            .or_else(|| self.config.auth.as_ref().and_then(|a| a.cookie.clone()));
 
         let access_token = cli
             .access_token
             .clone()
-            .or_else(|| self.config.auth.as_ref()?.access_token.clone());
+            .or_else(|| auth_from_file.as_ref().and_then(|a| a.access_token.clone()))
+            .or_else(|| self.config.auth.as_ref().and_then(|a| a.access_token.clone()));
 
         if cookie.is_some() || access_token.is_some() {
             Some(Auth {

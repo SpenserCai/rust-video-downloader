@@ -4,11 +4,13 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "rvd")]
 #[command(author = "RVD Contributors")]
-#[command(version = "0.2.0")]
+#[command(version = "0.2.5")]
 #[command(about = "A modular video downloader written in Rust", long_about = None)]
 pub struct Cli {
     /// Video URL to download (supports bilibili BV/av/ep/ss)
-    pub url: String,
+    /// Optional when using --login-qrcode or --login-tv
+    #[arg(required_unless_present_any = ["login_qrcode", "login_tv"])]
+    pub url: Option<String>,
 
     /// Quality priority (comma-separated, e.g., "1080P,720P,480P")
     #[arg(short = 'q', long)]
@@ -89,6 +91,14 @@ pub struct Cli {
     /// Danmaku format (xml or ass)
     #[arg(long, default_value = "ass")]
     pub danmaku_format: String,
+
+    /// Login using QR code (Web mode)
+    #[arg(long, conflicts_with = "login_tv")]
+    pub login_qrcode: bool,
+
+    /// Login using QR code (TV mode, gets access_token)
+    #[arg(long, conflicts_with = "login_qrcode")]
+    pub login_tv: bool,
 }
 
 impl Cli {
@@ -170,6 +180,24 @@ impl Cli {
             "xml" => DanmakuFormat::Xml,
             "ass" => DanmakuFormat::Ass,
             _ => DanmakuFormat::Ass,
+        }
+    }
+
+    /// Check if login is requested
+    pub fn needs_login(&self) -> bool {
+        self.login_qrcode || self.login_tv
+    }
+
+    /// Get the API mode for login (if login is requested)
+    pub fn get_login_api_mode(&self) -> Option<crate::platform::bilibili::ApiMode> {
+        use crate::platform::bilibili::ApiMode;
+        
+        if self.login_tv {
+            Some(ApiMode::TV)
+        } else if self.login_qrcode {
+            Some(ApiMode::Web)
+        } else {
+            None
         }
     }
 }

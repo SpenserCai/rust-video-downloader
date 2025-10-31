@@ -176,7 +176,7 @@ async fn test_get_subtitles() {
 #[test]
 fn test_orchestrator_creation() {
     let cli = Cli {
-        url: TEST_VIDEO_URL.to_string(),
+        url: Some(TEST_VIDEO_URL.to_string()),
         quality: None,
         codec: None,
         output: None,
@@ -197,6 +197,8 @@ fn test_orchestrator_creation() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let config = Config::default();
@@ -254,7 +256,7 @@ async fn test_info_only_mode() {
     let output_dir = setup_test_output_dir();
 
     let cli = Cli {
-        url: TEST_VIDEO_URL.to_string(),
+        url: Some(TEST_VIDEO_URL.to_string()),
         quality: None,
         codec: None,
         output: Some(output_dir.join("test_info_only.mp4").to_string_lossy().to_string()),
@@ -275,6 +277,8 @@ async fn test_info_only_mode() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
     };
 
     let config = Config::default();
@@ -309,7 +313,7 @@ async fn test_multi_page_selection() {
 
             // 测试分P选择逻辑
             let cli = Cli {
-                url: multi_page_url.to_string(),
+                url: Some(multi_page_url.to_string()),
                 quality: None,
                 codec: None,
                 output: None,
@@ -330,6 +334,8 @@ async fn test_multi_page_selection() {
         use_intl_api: false,
         download_danmaku: false,
         danmaku_format: "ass".to_string(),
+        login_qrcode: false,
+        login_tv: false,
             };
 
             let parsed_pages = cli.parse_pages();

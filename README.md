@@ -29,13 +29,13 @@
 - ✅ 章节信息提取和嵌入
 - ✅ TV/APP API 支持（无水印片源）
 - ✅ 国际版 API 支持
+- ✅ 二维码登录（Web端和TV端）
 
 ### 计划支持功能
 
 - ⬜ 8K/HDR/杜比视界/杜比全景声支持
 - ⬜ Aria2c 下载支持
 - ⬜ MP4Box 混流支持
-- ⬜ 二维码登录
 
 ## 安装
 
@@ -132,15 +132,55 @@ rvd BV1xx411c7mD -p "1-5"
 rvd BV1xx411c7mD -p ALL
 ```
 
+### 二维码登录
+
+RVD 支持通过扫描二维码登录获取认证凭证，无需手动复制Cookie。
+
+#### Web端登录（获取Cookie）
+
+```bash
+rvd --login-qrcode
+```
+
+如果想保存凭证以供后续使用：
+
+```bash
+rvd --login-qrcode --config-file config.toml
+```
+
+登录成功后，凭证会保存到 `auth.toml` 文件中。
+
+#### TV端登录（获取access_token）
+
+TV端登录可以获取无水印片源：
+
+```bash
+rvd --login-tv --config-file config.toml
+```
+
+#### 二维码显示
+
+- **Unix/Linux/macOS**：二维码会在终端中以彩色方块显示
+- **Windows PowerShell**：二维码会以Unicode字符显示
+- **备选方案**：同时会保存为 `qrcode.png` 图片文件
+
+登录流程：
+1. 程序生成二维码并显示在终端
+2. 使用哔哩哔哩手机APP扫描二维码
+3. 在手机上确认登录
+4. 程序自动获取凭证并保存（如果指定了配置文件）
+
 ### 使用认证
 
-如果需要下载会员视频或高清晰度内容，可以提供 Cookie：
+除了二维码登录，也可以手动提供认证信息。
+
+使用 Cookie：
 
 ```bash
 rvd BV1xx411c7mD --cookie "SESSDATA=your_sessdata_here"
 ```
 
-或使用 Access Token（用于 TV/APP API，未来支持）：
+使用 Access Token（用于 TV/APP API）：
 
 ```bash
 rvd BV1xx411c7mD --access-token "your_token_here"
@@ -254,10 +294,13 @@ output_template = "<videoTitle>_<quality>"
 # 多P视频输出文件名模板
 multi_output_template = "<videoTitle>/P<pageNumberWithZero>_<pageTitle>"
 
-# 认证信息
+# 认证信息（也可以使用独立的 auth.toml 文件）
 [auth]
 cookie = "SESSDATA=your_sessdata_here"
 # access_token = ""
+# refresh_token = ""
+# expires_at = 1234567890
+# mid = 123456
 
 # 外部工具路径
 [paths]
@@ -265,6 +308,26 @@ ffmpeg = "/usr/local/bin/ffmpeg"
 ```
 
 配置文件中的设置会被命令行参数覆盖。
+
+### 认证凭证文件
+
+使用二维码登录后，凭证会保存到独立的 `auth.toml` 文件中：
+
+```toml
+# 认证凭证文件
+# 警告：此文件包含敏感信息，请勿分享或提交到版本控制系统
+
+cookie = "SESSDATA=xxx; bili_jct=xxx; DedeUserID=xxx; DedeUserID__ckMd5=xxx; sid=xxx"
+access_token = "xxx"  # TV/APP 登录时使用
+refresh_token = "xxx"  # 用于刷新 access_token
+expires_at = 1234567890  # 过期时间戳（可选）
+mid = 123456  # 用户ID（可选）
+```
+
+**安全提示**：
+- Unix/Linux/macOS系统上，`auth.toml` 文件权限会自动设置为 `0600`（仅所有者可读写）
+- 建议将 `auth.toml` 添加到 `.gitignore` 中，避免意外提交
+- 凭证有效期通常为几个月，过期后需要重新登录
 
 ### 下载番剧和课程
 
@@ -428,6 +491,12 @@ Options:
           弹幕格式（xml 或 ass）
           [default: ass]
 
+      --login-qrcode
+          使用二维码登录（Web模式，获取Cookie）
+
+      --login-tv
+          使用二维码登录（TV模式，获取access_token）
+
   -v, --verbose
           启用详细日志输出
 
@@ -517,6 +586,14 @@ cargo fmt -- --check
 src/
 ├── cli/           # 命令行参数解析
 ├── app/           # 应用协调逻辑
+├── auth/          # 认证模块
+│   ├── login.rs       # 登录管理器
+│   ├── qrcode.rs      # 二维码显示
+│   ├── storage.rs     # 凭证存储
+│   ├── types.rs       # 认证类型定义
+│   └── providers/     # 认证提供者
+│       ├── bilibili.rs    # 哔哩哔哩认证
+│       └── mod.rs         # 签名管理器
 ├── platform/      # 平台特定实现
 │   ├── bilibili/  # 哔哩哔哩平台
 │   └── trait.rs   # 平台接口定义
@@ -524,7 +601,9 @@ src/
 │   ├── downloader.rs  # 下载引擎
 │   ├── muxer.rs       # 混流器
 │   ├── progress.rs    # 进度跟踪
-│   └── subtitle.rs    # 字幕处理
+│   ├── subtitle.rs    # 字幕处理
+│   ├── danmaku.rs     # 弹幕处理
+│   └── chapter.rs     # 章节处理
 ├── utils/         # 工具模块
 │   ├── http.rs    # HTTP 客户端
 │   ├── config.rs  # 配置管理
@@ -565,9 +644,14 @@ A: 需要提供有效的 Cookie（SESSDATA）：`rvd <url> --cookie "SESSDATA=..
 
 ### 认证相关
 
-**Q: 如何获取 Cookie？**
+**Q: 如何获取认证凭证？**
 
-A: 
+A: 推荐使用二维码登录（最简单）：
+```bash
+rvd --login-qrcode --config-file config.toml
+```
+
+也可以手动获取Cookie：
 1. 在浏览器中登录 bilibili.com
 2. 打开开发者工具（F12）
 3. 在 Application/Storage > Cookies 中找到 SESSDATA
@@ -575,7 +659,21 @@ A:
 
 **Q: Cookie 会过期吗？**
 
-A: 是的，Cookie 有效期通常为几个月。过期后需要重新获取。
+A: 是的，Cookie 有效期通常为几个月。过期后需要重新登录。
+
+**Q: Web端登录和TV端登录有什么区别？**
+
+A: 
+- **Web端登录** (`--login-qrcode`)：获取Cookie，适用于普通下载
+- **TV端登录** (`--login-tv`)：获取access_token，可以访问TV端API，获取无水印片源
+
+**Q: 二维码在终端显示不正常？**
+
+A: 程序会同时保存二维码为 `qrcode.png` 图片文件，可以打开图片扫描。
+
+**Q: 凭证保存在哪里？**
+
+A: 使用 `--config-file` 参数时，凭证会保存到同目录下的 `auth.toml` 文件中。不指定配置文件时，凭证仅在本次会话有效。
 
 ## 路线图
 
@@ -586,11 +684,17 @@ A: 是的，Cookie 有效期通常为几个月。过期后需要重新获取。
 - [x] TV/APP/国际版 API 支持
 - [x] 章节信息提取和嵌入
 
+### v0.2.5（已完成）✅
+- [x] 二维码登录（Web端和TV端）
+- [x] 完整的认证模块架构
+- [x] 安全的凭证存储（独立auth.toml文件）
+- [x] 跨平台二维码显示支持
+
 ### v0.3.0（计划中）
 - [ ] 8K/HDR/杜比视界/杜比全景声完整支持
 - [ ] Aria2c 下载引擎支持
 - [ ] MP4Box 混流支持
-- [ ] 二维码登录
+- [ ] 凭证自动刷新
 - [ ] 性能优化和内存使用改进
 
 ### v1.0.0（长期目标）

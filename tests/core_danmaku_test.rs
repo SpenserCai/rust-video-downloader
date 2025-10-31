@@ -22,7 +22,7 @@ fn test_danmaku_format_copy() {
 #[test]
 fn test_danmaku_format_clone() {
     let format1 = DanmakuFormat::Ass;
-    let format2 = format1.clone(); // 测试Clone trait
+    let format2 = format1; // 测试Copy trait (DanmakuFormat implements Copy)
     
     assert!(matches!(format1, DanmakuFormat::Ass));
     assert!(matches!(format2, DanmakuFormat::Ass));
