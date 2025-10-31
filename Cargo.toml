@@ -63,6 +63,9 @@ dialoguer = "0.11"
 # Cryptography
 md5 = "0.7"
 
+# XML processing
+quick-xml = "0.31"
+
 [dev-dependencies]
 mockito = "1.2"
 tempfile = "3.8"

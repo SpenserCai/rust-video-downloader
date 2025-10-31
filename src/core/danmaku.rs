@@ -30,7 +30,7 @@ pub async fn download_danmaku(
         .no_deflate()
         .no_brotli()
         .build()
-        .map_err(|e| crate::error::DownloaderError::Network(e))?;
+        .map_err(crate::error::DownloaderError::Network)?;
     
     let response = raw_client.get(&api).send().await?;
     
@@ -82,8 +82,9 @@ pub async fn download_danmaku(
 
     match format {
         DanmakuFormat::Xml => {
-            // 直接保存 XML
-            tokio::fs::write(output, xml_content).await?;
+            // 格式化并保存 XML
+            let formatted_xml = format_xml(&xml_content)?;
+            tokio::fs::write(output, formatted_xml).await?;
             tracing::info!("Danmaku saved to: {:?}", output);
         }
         DanmakuFormat::Ass => {
@@ -95,6 +96,41 @@ pub async fn download_danmaku(
     }
 
     Ok(())
+}
+
+/// 格式化 XML 弹幕
+fn format_xml(xml: &str) -> Result<String> {
+    use quick_xml::events::Event;
+    use quick_xml::Reader;
+    use quick_xml::Writer;
+    use std::io::Cursor;
+
+    let mut reader = Reader::from_str(xml);
+    reader.trim_text(true);
+
+    let mut writer = Writer::new_with_indent(Cursor::new(Vec::new()), b' ', 2);
+    
+    loop {
+        match reader.read_event() {
+            Ok(Event::Eof) => break,
+            Ok(event) => {
+                writer.write_event(event).map_err(|e| {
+                    crate::error::DownloaderError::Parse(format!("Failed to write XML event: {}", e))
+                })?;
+            }
+            Err(e) => {
+                return Err(crate::error::DownloaderError::Parse(format!(
+                    "Failed to parse XML: {}",
+                    e
+                )));
+            }
+        }
+    }
+
+    let result = writer.into_inner().into_inner();
+    String::from_utf8(result).map_err(|e| {
+        crate::error::DownloaderError::Parse(format!("Failed to convert XML to UTF-8: {}", e))
+    })
 }
 
 /// 解析 XML 弹幕
