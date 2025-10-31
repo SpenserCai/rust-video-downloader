@@ -1,5 +1,10 @@
+pub mod bilibili;
+
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+#[allow(unused_imports)]
+pub use bilibili::BilibiliAuthProvider;
 
 /// APP签名管理器（用于TV/APP端API）
 #[allow(dead_code)]
