@@ -15,7 +15,7 @@ impl ConsoleGuard {
     /// Initialize console with UTF-8 support and ANSI escape sequences on Windows.
     /// The original code page will be automatically restored when dropped.
     pub fn new() -> Self {
-        use winapi::um::consoleapi::{
+        use windows_sys::Win32::System::Console::{
             GetConsoleCP, GetConsoleOutputCP, SetConsoleCP, SetConsoleOutputCP,
         };
 
@@ -42,7 +42,7 @@ impl ConsoleGuard {
 #[cfg(windows)]
 impl Drop for ConsoleGuard {
     fn drop(&mut self) {
-        use winapi::um::consoleapi::{SetConsoleCP, SetConsoleOutputCP};
+        use windows_sys::Win32::System::Console::{SetConsoleCP, SetConsoleOutputCP};
 
         unsafe {
             // Restore original code pages
