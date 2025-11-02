@@ -30,11 +30,11 @@
 - ✅ TV/APP API 支持（无水印片源）
 - ✅ 国际版 API 支持
 - ✅ 二维码登录（Web端和TV端）
+- ✅ Aria2c 下载支持（更快的下载速度）
 
 ### 计划支持功能
 
 - ⬜ 8K/HDR/杜比视界/杜比全景声支持
-- ⬜ Aria2c 下载支持
 - ⬜ MP4Box 混流支持
 
 ## 安装
@@ -248,6 +248,64 @@ rvd BV1xx411c7mD --skip-mux
 rvd BV1xx411c7mD -t 8
 ```
 
+### 使用 Aria2c 下载
+
+Aria2c 是一个强大的下载工具，通常比内置下载器更快，特别是对于大文件。
+
+#### 前置要求
+
+首先需要安装 aria2c：
+
+**macOS:**
+```bash
+brew install aria2
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt install aria2
+```
+
+**Windows:**
+从 [aria2 官网](https://aria2.github.io/) 下载并安装。
+
+#### 使用方法
+
+启用 aria2c 下载：
+
+```bash
+rvd BV1xx411c7mD --use-aria2c
+```
+
+指定 aria2c 路径（如果不在 PATH 中）：
+
+```bash
+rvd BV1xx411c7mD --use-aria2c --aria2c-path /path/to/aria2c
+```
+
+自定义 aria2c 参数（例如减少连接数以避免被限速）：
+
+```bash
+rvd BV1xx411c7mD --use-aria2c --aria2c-args "-x8 -s8 -j8"
+```
+
+默认的 aria2c 参数：
+- `-x16`: 每个服务器最多16个连接
+- `-s16`: 分割成16个部分下载
+- `-j16`: 最多同时下载16个文件
+- `-k5M`: 最小分割大小5MB
+
+#### 在配置文件中启用
+
+也可以在配置文件中启用 aria2c：
+
+```toml
+[aria2c]
+enabled = true
+# path = "/usr/local/bin/aria2c"  # 可选
+# args = "-x8 -s8 -j8"  # 可选
+```
+
 ### 启用详细日志
 
 ```bash
@@ -305,6 +363,12 @@ cookie = "SESSDATA=your_sessdata_here"
 # 外部工具路径
 [paths]
 ffmpeg = "/usr/local/bin/ffmpeg"
+
+# Aria2c 下载配置（可选）
+[aria2c]
+enabled = false
+# path = "/usr/local/bin/aria2c"
+# args = "-x8 -s8 -j8"
 ```
 
 配置文件中的设置会被命令行参数覆盖。

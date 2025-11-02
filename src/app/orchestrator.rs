@@ -30,7 +30,40 @@ pub struct Orchestrator {
 impl Orchestrator {
     pub fn new(config: Config, cli: &Cli) -> Result<Self> {
         let http_client = Arc::new(HttpClient::new()?);
-        let downloader = Arc::new(Downloader::new(http_client.clone(), cli.threads));
+        
+        // Configure downloader with aria2c settings
+        let mut downloader = Downloader::new(http_client.clone(), cli.threads);
+        
+        // Determine download method from CLI or config
+        let use_aria2c = cli.use_aria2c 
+            || config.aria2c.as_ref().map(|a| a.enabled).unwrap_or(false);
+        
+        if use_aria2c {
+            downloader = downloader.with_method(crate::core::downloader::DownloadMethod::Aria2c);
+            
+            // Set aria2c path from CLI or config
+            if let Some(ref path) = cli.aria2c_path {
+                downloader = downloader.with_aria2c_path(path.clone());
+            } else if let Some(ref aria2c_config) = config.aria2c {
+                if let Some(ref path) = aria2c_config.path {
+                    downloader = downloader.with_aria2c_path(path.clone());
+                }
+            }
+            
+            // Set custom aria2c args from CLI or config
+            if let Some(ref args) = cli.aria2c_args {
+                downloader = downloader.with_aria2c_args(args.clone());
+            } else if let Some(ref aria2c_config) = config.aria2c {
+                if let Some(ref args) = aria2c_config.args {
+                    downloader = downloader.with_aria2c_args(args.clone());
+                }
+            }
+            
+            tracing::info!("aria2c download mode enabled");
+        }
+        
+        let downloader = Arc::new(downloader);
+        
         let muxer =
             Arc::new(Muxer::new(cli.ffmpeg_path.clone().or_else(|| {
                 config.paths.as_ref().and_then(|p| p.ffmpeg.clone())
@@ -408,10 +441,26 @@ impl Orchestrator {
         // Create temp directory
         let temp_dir = file::create_temp_dir(&format!("{}_{}", video_info.id, page.cid)).await?;
 
+        // Create a downloader with auth for this download session
+        let downloader_with_auth = if auth.is_some() {
+            // Clone the Arc to get the inner Downloader, then create a new one with auth
+            let mut new_downloader = Downloader::new(self.http_client.clone(), self.downloader.thread_count);
+            new_downloader = new_downloader
+                .with_method(self.downloader.method)
+                .with_aria2c_path(self.downloader.aria2c_path.clone())
+                .with_auth(auth.cloned());
+            if let Some(ref args) = self.downloader.aria2c_args {
+                new_downloader = new_downloader.with_aria2c_args(args.clone());
+            }
+            Arc::new(new_downloader)
+        } else {
+            self.downloader.clone()
+        };
+
         // Download video
         let video_path = temp_dir.join("video.m4s");
         let video_pb = self.progress.create_bar("Video", 0);
-        self.downloader
+        downloader_with_auth
             .download(&video_stream.url, &video_path, Some(video_pb.clone()))
             .await?;
         self.progress.finish("Video", "✓ Video downloaded");
@@ -419,7 +468,7 @@ impl Orchestrator {
         // Download audio
         let audio_path = temp_dir.join("audio.m4s");
         let audio_pb = self.progress.create_bar("Audio", 0);
-        self.downloader
+        downloader_with_auth
             .download(&audio_stream.url, &audio_path, Some(audio_pb.clone()))
             .await?;
         self.progress.finish("Audio", "✓ Audio downloaded");

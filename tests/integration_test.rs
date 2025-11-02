@@ -199,6 +199,9 @@ fn test_orchestrator_creation() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     let config = Config::default();
@@ -279,6 +282,9 @@ async fn test_info_only_mode() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     let config = Config::default();
@@ -336,6 +342,9 @@ async fn test_multi_page_selection() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
             };
 
             let parsed_pages = cli.parse_pages();

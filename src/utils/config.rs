@@ -19,6 +19,8 @@ pub struct Config {
     pub auth: Option<AuthConfig>,
     #[serde(default)]
     pub paths: Option<PathsConfig>,
+    #[serde(default)]
+    pub aria2c: Option<Aria2cConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
@@ -38,6 +40,16 @@ pub struct AuthConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct PathsConfig {
     pub ffmpeg: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Aria2cConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub path: Option<String>,
+    #[serde(default)]
+    pub args: Option<String>,
 }
 
 impl Config {

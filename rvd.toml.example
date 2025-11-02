@@ -34,3 +34,18 @@ multi_output_template = "<videoTitle>/P<pageNumberWithZero>_<pageTitle>"
 # FFmpeg 可执行文件路径
 # 如果 ffmpeg 在 PATH 中，可以不设置
 # ffmpeg = "/usr/local/bin/ffmpeg"
+
+# Aria2c 下载配置（可选）
+[aria2c]
+# 是否启用 aria2c 下载（默认: false）
+# aria2c 通常比内置下载器更快，特别是对于大文件
+enabled = false
+
+# aria2c 可执行文件路径（默认: "aria2c"）
+# 如果 aria2c 在 PATH 中，可以不设置
+# path = "/usr/local/bin/aria2c"
+
+# 自定义 aria2c 参数（可选）
+# 默认参数: -x16 -s16 -j16 -k5M
+# 可以覆盖默认参数，例如减少连接数以避免被限速
+# args = "-x8 -s8 -j8 -k5M"

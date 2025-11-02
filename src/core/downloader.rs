@@ -1,4 +1,5 @@
 use crate::error::{DownloaderError, Result};
+use crate::types::Auth;
 use crate::utils::http::HttpClient;
 use futures::StreamExt;
 use indicatif::ProgressBar;
@@ -6,11 +7,25 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
+
+/// Download method to use
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DownloadMethod {
+    /// Use built-in HTTP downloader
+    Builtin,
+    /// Use aria2c external downloader
+    Aria2c,
+}
 
 pub struct Downloader {
     client: Arc<HttpClient>,
-    thread_count: usize,
+    pub(crate) thread_count: usize,
     chunk_size: usize,
+    pub(crate) method: DownloadMethod,
+    pub(crate) aria2c_path: String,
+    pub(crate) aria2c_args: Option<String>,
+    auth: Option<Auth>,
 }
 
 impl Downloader {
@@ -19,6 +34,46 @@ impl Downloader {
             client,
             thread_count,
             chunk_size: 10 * 1024 * 1024, // 10MB chunks
+            method: DownloadMethod::Builtin,
+            aria2c_path: "aria2c".to_string(),
+            aria2c_args: None,
+            auth: None,
+        }
+    }
+
+    /// Set download method
+    pub fn with_method(mut self, method: DownloadMethod) -> Self {
+        self.method = method;
+        self
+    }
+
+    /// Set aria2c binary path
+    pub fn with_aria2c_path(mut self, path: String) -> Self {
+        self.aria2c_path = path;
+        self
+    }
+
+    /// Set custom aria2c arguments
+    pub fn with_aria2c_args(mut self, args: String) -> Self {
+        self.aria2c_args = Some(args);
+        self
+    }
+
+    /// Set authentication info for aria2c
+    pub fn with_auth(mut self, auth: Option<Auth>) -> Self {
+        self.auth = auth;
+        self
+    }
+
+    /// Check if aria2c is available
+    pub async fn check_aria2c(&self) -> Result<bool> {
+        match Command::new(&self.aria2c_path)
+            .arg("--version")
+            .output()
+            .await
+        {
+            Ok(output) => Ok(output.status.success()),
+            Err(_) => Ok(false),
         }
     }
 
@@ -33,6 +88,11 @@ impl Downloader {
         // Create parent directory if it doesn't exist
         if let Some(parent) = output.parent() {
             tokio::fs::create_dir_all(parent).await?;
+        }
+
+        // Use aria2c if specified
+        if self.method == DownloadMethod::Aria2c {
+            return self.download_with_aria2c(url, output, progress).await;
         }
 
         // Try to get file size
@@ -241,6 +301,114 @@ impl Downloader {
         }
 
         output_file.flush().await?;
+        Ok(())
+    }
+
+    /// Download file using aria2c
+    async fn download_with_aria2c(
+        &self,
+        url: &str,
+        output: &Path,
+        progress: Option<Arc<ProgressBar>>,
+    ) -> Result<()> {
+        tracing::info!("Using aria2c for download");
+
+        // Check if aria2c is available
+        if !self.check_aria2c().await? {
+            tracing::warn!("aria2c not found, falling back to built-in downloader");
+            // Fall back to built-in streaming download
+            return self.download_streaming(url, output, progress).await;
+        }
+
+        let output_dir = output
+            .parent()
+            .ok_or_else(|| DownloaderError::DownloadFailed("Invalid output path".to_string()))?;
+        let output_filename = output
+            .file_name()
+            .ok_or_else(|| DownloaderError::DownloadFailed("Invalid output filename".to_string()))?
+            .to_str()
+            .ok_or_else(|| DownloaderError::DownloadFailed("Invalid output filename".to_string()))?;
+
+        // Build aria2c command
+        let mut args = vec![
+            // Basic options
+            "--auto-file-renaming=false".to_string(),
+            "--download-result=hide".to_string(),
+            "--allow-overwrite=true".to_string(),
+            "--console-log-level=warn".to_string(),
+            // Connection options (matching BBDown defaults)
+            "-x16".to_string(), // max connections per server
+            "-s16".to_string(), // split into 16 parts
+            "-j16".to_string(), // max concurrent downloads
+            "-k5M".to_string(), // min split size 5MB
+        ];
+
+        // Add headers for Bilibili
+        if url.contains("bilivideo.com") {
+            // Only add Referer for non-TV/APP API URLs
+            if !url.contains("platform=android_tv_yst") && !url.contains("platform=android") {
+                args.push("--header=Referer: https://www.bilibili.com".to_string());
+            }
+            args.push("--header=User-Agent: Mozilla/5.0".to_string());
+
+            // Add cookie if available
+            if let Some(ref auth) = self.auth {
+                if let Some(ref cookie) = auth.cookie {
+                    args.push(format!("--header=Cookie: {}", cookie));
+                }
+            }
+        }
+
+        // Add custom args if provided
+        if let Some(ref custom_args) = self.aria2c_args {
+            for arg in custom_args.split_whitespace() {
+                args.push(arg.to_string());
+            }
+        }
+
+        // Add URL and output options
+        args.push(url.to_string());
+        args.push("-d".to_string());
+        args.push(
+            output_dir
+                .to_str()
+                .ok_or_else(|| {
+                    DownloaderError::DownloadFailed("Invalid output directory".to_string())
+                })?
+                .to_string(),
+        );
+        args.push("-o".to_string());
+        args.push(output_filename.to_string());
+
+        tracing::debug!("aria2c command: {} {}", self.aria2c_path, args.join(" "));
+
+        // Execute aria2c
+        let output_result = Command::new(&self.aria2c_path)
+            .args(&args)
+            .output()
+            .await
+            .map_err(|e| {
+                DownloaderError::DownloadFailed(format!("Failed to execute aria2c: {}", e))
+            })?;
+
+        if !output_result.status.success() {
+            let stderr = String::from_utf8_lossy(&output_result.stderr);
+            return Err(DownloaderError::DownloadFailed(format!(
+                "aria2c failed: {}",
+                stderr
+            )));
+        }
+
+        // Update progress bar to complete if provided
+        if let Some(ref pb) = progress {
+            if let Ok(metadata) = tokio::fs::metadata(output).await {
+                pb.set_length(metadata.len());
+                pb.set_position(metadata.len());
+            }
+            pb.finish();
+        }
+
+        tracing::info!("aria2c download completed successfully");
         Ok(())
     }
 }
