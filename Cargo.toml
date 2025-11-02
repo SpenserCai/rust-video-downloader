@@ -5,6 +5,9 @@ edition = "2021"
 authors = ["RVD Contributors"]
 description = "A modular video downloader written in Rust"
 license = "MIT"
+repository = "https://github.com/SpenserCai/rust-video-downloader"
+keywords = ["video", "downloader", "bilibili", "cli"]
+readme = "README.md"
 
 [lib]
 name = "rvd"
