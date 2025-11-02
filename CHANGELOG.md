@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Aria2c 下载支持 🚀
+- **外部下载器集成**：支持使用 aria2c 作为下载引擎，显著提升大文件下载速度
+- **灵活配置**：
+  - 通过 `--use-aria2c` 参数启用
+  - 支持自定义 aria2c 路径（`--aria2c-path`）
+  - 支持自定义 aria2c 参数（`--aria2c-args`）
+  - 可在配置文件中全局启用
+- **智能回退**：aria2c 不可用时自动回退到内置下载器
+- **完整功能支持**：
+  - 自动添加必要的 HTTP 头（Referer、User-Agent、Cookie）
+  - 支持认证信息传递
+  - 保留进度条显示
+  - 与现有下载流程无缝集成
+- **默认优化参数**：
+  - `-x16`：每个服务器最多16个连接
+  - `-s16`：分割成16个部分下载
+  - `-j16`：最多同时下载16个文件
+  - `-k5M`：最小分割大小5MB
+- **新增配置选项**：
+  ```toml
+  [aria2c]
+  enabled = false
+  path = "/usr/local/bin/aria2c"  # 可选
+  args = "-x8 -s8 -j8"  # 可选
+  ```
+
+#### 技术实现
+- 新增 `DownloadMethod` 枚举区分内置和 aria2c 下载方式
+- 扩展 `Downloader` 结构体支持多种下载方法
+- 实现 `download_with_aria2c()` 方法调用外部 aria2c 进程
+- 支持通过 builder 模式配置下载器
+- 自动检测 aria2c 可用性（`check_aria2c()`）
+- 完善的错误处理和日志输出
+
+### Changed
+- 更新 `Orchestrator` 以支持 aria2c 配置
+- 改进下载器初始化流程，支持动态选择下载方法
+- 扩展 CLI 参数支持 aria2c 相关选项
+- 更新配置文件结构，新增 `[aria2c]` 配置段
+
+### Documentation
+- 更新 README.md 添加 aria2c 使用说明
+- 新增 aria2c 安装指南（macOS、Ubuntu/Debian、Windows）
+- 更新配置文件示例（`rvd.toml.example`）
+- 添加 aria2c 参数自定义示例
+
+### Tests
+- 新增 `tests/core_aria2c_test.rs` 测试文件
+- 测试 aria2c 可用性检查
+- 测试下载器配置和 builder 模式
+- 测试 `DownloadMethod` 枚举
+- 更新所有现有测试以支持新的 CLI 字段
+
 ## [0.2.6] - 2025-10-31
 
 ### Fixed

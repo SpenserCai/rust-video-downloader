@@ -99,6 +99,18 @@ pub struct Cli {
     /// Login using QR code (TV mode, gets access_token)
     #[arg(long, conflicts_with = "login_qrcode")]
     pub login_tv: bool,
+
+    /// Use aria2c for downloading (faster for large files)
+    #[arg(long)]
+    pub use_aria2c: bool,
+
+    /// Path to aria2c binary (default: "aria2c")
+    #[arg(long)]
+    pub aria2c_path: Option<String>,
+
+    /// Custom aria2c arguments (e.g., "-x8 -s8")
+    #[arg(long)]
+    pub aria2c_args: Option<String>,
 }
 
 impl Cli {
@@ -200,4 +212,5 @@ impl Cli {
             None
         }
     }
+
 }

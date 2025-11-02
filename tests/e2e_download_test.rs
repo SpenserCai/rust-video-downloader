@@ -238,6 +238,9 @@ async fn test_32_2_download_bangumi_single_episode() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -515,6 +518,9 @@ async fn test_32_6_download_with_tv_api() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -580,6 +586,9 @@ async fn test_32_7_download_danmaku_xml() {
         danmaku_format: "xml".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -638,6 +647,9 @@ async fn test_32_7_download_danmaku_ass() {
         danmaku_format: "ass".to_string(), // ASS格式
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -738,6 +750,9 @@ async fn test_32_8_download_with_chapters() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -800,6 +815,9 @@ async fn test_32_9_interactive_mode_disabled() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -865,6 +883,9 @@ async fn test_complete_download_workflow() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -938,6 +959,9 @@ async fn test_multi_page_download() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -1009,6 +1033,9 @@ async fn test_info_only_mode() {
         danmaku_format: "ass".to_string(),
         login_qrcode: false,
         login_tv: false,
+        use_aria2c: false,
+        aria2c_path: None,
+        aria2c_args: None,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
