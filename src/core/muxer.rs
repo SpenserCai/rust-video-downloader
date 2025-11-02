@@ -4,10 +4,17 @@ use std::process::Command;
 
 pub struct Muxer {
     ffmpeg_path: PathBuf,
+    ffmpeg_version: Option<(u32, u32)>, // (major, minor)
+    use_mp4box: bool,
 }
 
 impl Muxer {
+    #[allow(dead_code)]
     pub fn new(ffmpeg_path: Option<PathBuf>) -> Result<Self> {
+        Self::new_with_options(ffmpeg_path, false)
+    }
+
+    pub fn new_with_options(ffmpeg_path: Option<PathBuf>, use_mp4box: bool) -> Result<Self> {
         let path = if let Some(p) = ffmpeg_path {
             p
         } else {
@@ -15,15 +22,19 @@ impl Muxer {
             PathBuf::from("ffmpeg")
         };
 
-        let muxer = Self { ffmpeg_path: path };
+        let mut muxer = Self {
+            ffmpeg_path: path,
+            ffmpeg_version: None,
+            use_mp4box,
+        };
 
-        // Check if ffmpeg is available
+        // Check if ffmpeg is available and get version
         muxer.check_ffmpeg()?;
 
         Ok(muxer)
     }
 
-    pub fn check_ffmpeg(&self) -> Result<String> {
+    pub fn check_ffmpeg(&mut self) -> Result<String> {
         let output = Command::new(&self.ffmpeg_path)
             .arg("-version")
             .output()
@@ -33,11 +44,67 @@ impl Muxer {
             return Err(DownloaderError::FFmpegNotFound);
         }
 
-        let version = String::from_utf8_lossy(&output.stdout);
-        let first_line = version.lines().next().unwrap_or("Unknown version");
+        let version_output = String::from_utf8_lossy(&output.stdout);
+        let first_line = version_output.lines().next().unwrap_or("Unknown version");
 
-        tracing::info!("FFmpeg found: {}", first_line);
+        // 解析FFmpeg版本号
+        self.ffmpeg_version = self.parse_ffmpeg_version(&version_output);
+
+        if let Some((major, minor)) = self.ffmpeg_version {
+            tracing::info!("FFmpeg found: {} (version {}.{})", first_line, major, minor);
+        } else {
+            tracing::info!("FFmpeg found: {}", first_line);
+        }
+
         Ok(first_line.to_string())
+    }
+
+    fn parse_ffmpeg_version(&self, version_output: &str) -> Option<(u32, u32)> {
+        // 查找 "ffmpeg version X.Y" 或 "libavutil X.Y"
+        for line in version_output.lines() {
+            if line.contains("ffmpeg version") {
+                // 尝试解析 "ffmpeg version 5.1.2" 格式
+                if let Some(version_str) = line.split_whitespace().nth(2) {
+                    if let Some((major, minor)) = Self::parse_version_string(version_str) {
+                        return Some((major, minor));
+                    }
+                }
+            } else if line.contains("libavutil") {
+                // 尝试解析 "libavutil 57.17.100" 格式
+                if let Some(version_str) = line.split_whitespace().nth(1) {
+                    if let Some((major, minor)) = Self::parse_version_string(version_str) {
+                        return Some((major, minor));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn parse_version_string(version_str: &str) -> Option<(u32, u32)> {
+        let parts: Vec<&str> = version_str.split('.').collect();
+        if parts.len() >= 2 {
+            if let (Ok(major), Ok(minor)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                return Some((major, minor));
+            }
+        }
+        None
+    }
+
+    /// 检查FFmpeg是否支持杜比视界 (Dolby Vision)
+    /// FFmpeg 5.0+ 或 libavutil 57.17+ 支持杜比视界
+    pub fn supports_dolby_vision(&self) -> bool {
+        if let Some((major, minor)) = self.ffmpeg_version {
+            // 检查是否是 libavutil 版本
+            if major == 57 && minor >= 17 {
+                return true;
+            }
+            // 检查是否是 FFmpeg 主版本
+            if major >= 5 {
+                return true;
+            }
+        }
+        false
     }
 
     pub async fn mux(
@@ -58,7 +125,31 @@ impl Muxer {
         subtitles: &[PathBuf],
         chapters: &[crate::types::Chapter],
     ) -> Result<()> {
+        self.mux_with_options(video, audio, output, subtitles, chapters, false).await
+    }
+
+    pub async fn mux_with_options(
+        &self,
+        video: &Path,
+        audio: &Path,
+        output: &Path,
+        subtitles: &[PathBuf],
+        chapters: &[crate::types::Chapter],
+        is_dolby_vision: bool,
+    ) -> Result<()> {
         tracing::info!("Muxing video and audio to {:?}", output);
+
+        // 检查是否需要使用mp4box处理杜比视界
+        let should_use_mp4box = self.use_mp4box || (is_dolby_vision && !self.supports_dolby_vision());
+
+        if should_use_mp4box && is_dolby_vision && !self.supports_dolby_vision() {
+            tracing::warn!(
+                "检测到杜比视界清晰度且您的FFmpeg版本小于5.0，建议使用mp4box混流或升级FFmpeg"
+            );
+            tracing::warn!("当前将使用FFmpeg继续混流，但可能无法正确处理杜比视界元数据");
+            // 注意：实际的mp4box实现需要额外的工作，这里先使用FFmpeg
+            // TODO: 实现mp4box混流逻辑
+        }
 
         let mut cmd = Command::new(&self.ffmpeg_path);
         cmd.arg("-i").arg(video);

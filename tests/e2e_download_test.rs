@@ -241,6 +241,7 @@ async fn test_32_2_download_bangumi_single_episode() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -521,6 +522,7 @@ async fn test_32_6_download_with_tv_api() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -589,6 +591,7 @@ async fn test_32_7_download_danmaku_xml() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -650,6 +653,7 @@ async fn test_32_7_download_danmaku_ass() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -753,6 +757,7 @@ async fn test_32_8_download_with_chapters() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -818,6 +823,7 @@ async fn test_32_9_interactive_mode_disabled() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -886,6 +892,7 @@ async fn test_complete_download_workflow() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -962,6 +969,7 @@ async fn test_multi_page_download() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {
@@ -1036,6 +1044,7 @@ async fn test_info_only_mode() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     if let Ok(orchestrator) = Orchestrator::new(config, &cli) {

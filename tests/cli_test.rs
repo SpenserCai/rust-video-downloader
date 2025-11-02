@@ -30,6 +30,7 @@ fn test_parse_quality_priority_default() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let quality = cli.parse_quality_priority();
@@ -65,6 +66,7 @@ fn test_parse_quality_priority_custom() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let quality = cli.parse_quality_priority();
@@ -100,6 +102,7 @@ fn test_parse_codec_priority_default() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let codec = cli.parse_codec_priority();
@@ -135,6 +138,7 @@ fn test_parse_codec_priority_custom() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let codec = cli.parse_codec_priority();
@@ -170,6 +174,7 @@ fn test_parse_pages_none() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let pages = cli.parse_pages();
@@ -205,6 +210,7 @@ fn test_parse_pages_all() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let pages = cli.parse_pages();
@@ -240,6 +246,7 @@ fn test_parse_pages_single() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let pages = cli.parse_pages();
@@ -275,6 +282,7 @@ fn test_parse_pages_multiple() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let pages = cli.parse_pages();
@@ -310,6 +318,7 @@ fn test_parse_pages_range() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let pages = cli.parse_pages();
@@ -345,6 +354,7 @@ fn test_parse_pages_mixed() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let pages = cli.parse_pages();
@@ -381,6 +391,7 @@ fn test_cli_api_mode_tv() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert!(cli.use_tv_api);
@@ -417,6 +428,7 @@ fn test_cli_api_mode_app() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert!(cli.use_app_api);
@@ -453,6 +465,7 @@ fn test_cli_api_mode_international() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert!(cli.use_intl_api);
@@ -490,6 +503,7 @@ fn test_cli_danmaku_download() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert!(cli.download_danmaku);
@@ -524,6 +538,7 @@ fn test_cli_danmaku_format_xml() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert_eq!(cli.danmaku_format, "xml");
@@ -560,6 +575,7 @@ fn test_cli_danmaku_format_ass() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert_eq!(cli.danmaku_format, "ass");
@@ -597,6 +613,7 @@ fn test_cli_interactive_flag() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
     
     assert!(cli.interactive);

@@ -202,6 +202,7 @@ fn test_orchestrator_creation() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let config = Config::default();
@@ -243,10 +244,32 @@ async fn test_muxer_check_ffmpeg() {
     let result = Muxer::new(None);
 
     match result {
-        Ok(muxer) => {
+        Ok(mut muxer) => {
             let version = muxer.check_ffmpeg();
             assert!(version.is_ok());
             println!("✓ FFmpeg检查成功: {}", version.unwrap());
+        }
+        Err(e) => {
+            println!("⚠ FFmpeg未找到: {} (这是预期的，如果系统未安装ffmpeg)", e);
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_muxer_dolby_vision_support() {
+    let result = Muxer::new_with_options(None, false);
+
+    match result {
+        Ok(muxer) => {
+            let supports_dv = muxer.supports_dolby_vision();
+            println!("✓ FFmpeg杜比视界支持检测: {}", if supports_dv { "支持" } else { "不支持" });
+            
+            // 这个测试不应该失败，只是报告支持情况
+            if supports_dv {
+                println!("  ℹ️  您的FFmpeg版本支持杜比视界");
+            } else {
+                println!("  ℹ️  您的FFmpeg版本不支持杜比视界，建议升级到5.0+");
+            }
         }
         Err(e) => {
             println!("⚠ FFmpeg未找到: {} (这是预期的，如果系统未安装ffmpeg)", e);
@@ -285,6 +308,7 @@ async fn test_info_only_mode() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
     };
 
     let config = Config::default();
@@ -345,6 +369,7 @@ async fn test_multi_page_selection() {
         use_aria2c: false,
         aria2c_path: None,
         aria2c_args: None,
+        use_mp4box: false,
             };
 
             let parsed_pages = cli.parse_pages();

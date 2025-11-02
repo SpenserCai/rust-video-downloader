@@ -65,9 +65,12 @@ impl Orchestrator {
         let downloader = Arc::new(downloader);
         
         let muxer =
-            Arc::new(Muxer::new(cli.ffmpeg_path.clone().or_else(|| {
-                config.paths.as_ref().and_then(|p| p.ffmpeg.clone())
-            }))?);
+            Arc::new(Muxer::new_with_options(
+                cli.ffmpeg_path.clone().or_else(|| {
+                    config.paths.as_ref().and_then(|p| p.ffmpeg.clone())
+                }),
+                cli.use_mp4box,
+            )?);
         let progress = Arc::new(ProgressTracker::new());
 
         // 根据CLI参数选择API模式
@@ -585,10 +588,17 @@ impl Orchestrator {
             tokio::fs::copy(&audio_path, &audio_out).await?;
             println!("  ✓ Files saved (muxing skipped)");
         } else {
+            // 检测是否是杜比视界 (quality_id 126)
+            let is_dolby_vision = video_stream.quality_id == 126;
+            
+            if is_dolby_vision {
+                tracing::info!("检测到杜比视界清晰度");
+            }
+            
             // Mux video and audio with chapters
             println!("  🔄 Muxing...");
             self.muxer
-                .mux_with_chapters(&video_path, &audio_path, &output_path, &subtitle_paths, &chapters)
+                .mux_with_options(&video_path, &audio_path, &output_path, &subtitle_paths, &chapters, is_dolby_vision)
                 .await?;
             println!("  ✓ Muxed to: {}", output_path.display());
         }
