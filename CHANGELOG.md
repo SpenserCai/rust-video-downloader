@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2025-11-02
+
 ### Added
 
 #### 杜比视界和杜比全景声支持 🎬🔊
@@ -256,7 +258,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 模块化、可扩展的架构
 - 支持 AVC/HEVC/AV1 编码
 
-[0.2.5]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.5...v0.2.6
+[0.2.7]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.6...v0.2.7
+[0.2.6]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.1...v0.2.5
 [0.2.1]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/SpenserCai/rust-video-downloader/compare/v0.1.0...v0.2.0
