@@ -4,11 +4,11 @@
 
 **一个高性能、模块化的跨平台视频下载工具**
 
-[![Crates.io](https://img.shields.io/crates/v/rvd.svg)](https://crates.io/crates/rvd)
-[![Downloads](https://img.shields.io/crates/d/rvd.svg)](https://crates.io/crates/rvd)
-[![License](https://img.shields.io/crates/l/rvd.svg)](https://github.com/SpenserCai/rust-video-downloader/blob/main/LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
-[![GitHub Release](https://img.shields.io/github/v/release/SpenserCai/rust-video-downloader)](https://github.com/SpenserCai/rust-video-downloader/releases)
+[![Crates.io](https://img.shields.io/crates/v/rvd.svg?style=flat&color=blue)](https://crates.io/crates/rvd)
+[![Downloads](https://img.shields.io/crates/d/rvd.svg?style=flat&color=green)](https://crates.io/crates/rvd)
+[![License](https://img.shields.io/crates/l/rvd.svg?style=flat&color=yellow)](https://github.com/SpenserCai/rust-video-downloader/blob/main/LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg?style=flat)](https://www.rust-lang.org/)
+[![GitHub Release](https://img.shields.io/github/v/release/SpenserCai/rust-video-downloader?style=flat&color=purple)](https://github.com/SpenserCai/rust-video-downloader/releases)
 
 [安装](#-安装) • [快速开始](#-快速开始) • [文档](#-使用指南) • [贡献](#-贡献)
 
