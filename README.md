@@ -82,13 +82,7 @@
 
 ## 📦 安装
 
-### 方式一：从 Crates.io 安装（推荐）
-
-```bash
-cargo install rvd
-```
-
-### 方式二：下载预编译二进制文件
+### 方式一：下载预编译二进制文件
 
 从 [GitHub Releases](https://github.com/SpenserCai/rust-video-downloader/releases) 下载适合你系统的预编译版本：
 
@@ -97,6 +91,12 @@ cargo install rvd
 - **Linux**: `rvd-x86_64-unknown-linux-gnu.tar.gz`
 
 下载后解压并将可执行文件添加到系统 PATH。
+
+### 方式二：从 Crates.io 安装
+
+```bash
+cargo install rvd
+```
 
 <details>
 <summary><b>方式三：从源码编译</b></summary>
