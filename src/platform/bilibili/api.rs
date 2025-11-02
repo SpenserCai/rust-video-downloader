@@ -60,6 +60,20 @@ pub struct PlayUrlData {
 pub struct DashData {
     pub video: Vec<DashStream>,
     pub audio: Vec<DashStream>,
+    #[serde(default)]
+    pub dolby: Option<DolbyData>,
+    #[serde(default)]
+    pub flac: Option<FlacData>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DolbyData {
+    pub audio: Option<Vec<DashStream>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FlacData {
+    pub audio: Option<DashStream>,
 }
 
 #[derive(Debug, Deserialize)]

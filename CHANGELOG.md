@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### 杜比视界和杜比全景声支持 🎬🔊
+- **高级音视频格式支持**：
+  - 杜比视界（Dolby Vision）视频流识别和下载（quality_id: 126）
+  - 杜比全景声（Dolby Atmos）音频流识别和下载（E-AC-3 编码）
+  - Hi-Res 无损音频（FLAC）支持
+- **智能 FFmpeg 版本检测**：
+  - 自动解析 FFmpeg 版本号（支持 ffmpeg version 和 libavutil 格式）
+  - 检测 FFmpeg 是否支持杜比视界（需要 5.0+ 或 libavutil 57.17+）
+  - 版本不足时显示友好警告信息
+- **API 数据结构扩展**：
+  - 在 `DashData` 中添加 `dolby` 和 `flac` 字段
+  - 新增 `DolbyData` 和 `FlacData` 结构体
+  - 支持从 B站 API 响应中提取杜比音频流
+- **流选择增强**：
+  - 在流列表中清晰标识杜比和 Hi-Res 音频（如 "E-AC-3 (Dolby)", "FLAC (Hi-Res)"）
+  - 支持通过清晰度优先级选择杜比视界
+  - 支持通过编码优先级选择杜比音频
+- **混流优化**：
+  - 自动检测视频是否为杜比视界（quality_id == 126）
+  - 根据 FFmpeg 版本和用户配置选择混流策略
+  - 新增 `mux_with_options()` 方法支持杜比视界标志
+- **MP4Box 支持（预留）**：
+  - 新增 `--use-mp4box` CLI 参数
+  - 在 `Muxer` 中预留 MP4Box 混流逻辑接口
+  - 为未来完整实现 MP4Box 混流做准备
+- **用户体验改进**：
+  - 检测到杜比视界时自动记录日志
+  - FFmpeg 版本不足时提供升级建议
+  - 在 README 中添加详细的杜比支持说明和使用示例
+
+#### 技术实现
+- 扩展 `PlayUrlData` 的 `DashData` 结构支持 `dolby` 和 `flac` 字段
+- 在 `parser.rs` 中实现杜比和 Hi-Res 音频流的提取逻辑
+- 在 `Muxer` 中添加 `ffmpeg_version` 字段和版本解析方法
+- 实现 `supports_dolby_vision()` 方法检测 FFmpeg 兼容性
+- 新增 `parse_ffmpeg_version()` 和 `parse_version_string()` 辅助方法
+- 在 `Orchestrator` 中集成杜比视界检测和混流选项传递
+- 扩展 CLI 参数支持 `--use-mp4box` 选项
+
 #### Aria2c 下载支持 🚀
 - **外部下载器集成**：支持使用 aria2c 作为下载引擎，显著提升大文件下载速度
 - **灵活配置**：

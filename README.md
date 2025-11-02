@@ -31,11 +31,14 @@
 - ✅ 国际版 API 支持
 - ✅ 二维码登录（Web端和TV端）
 - ✅ Aria2c 下载支持（更快的下载速度）
+- ✅ 杜比视界和杜比全景声支持
+- ✅ Hi-Res 无损音频（FLAC）支持
+- ✅ FFmpeg 版本检测（杜比视界兼容性）
 
 ### 计划支持功能
 
-- ⬜ 8K/HDR/杜比视界/杜比全景声支持
-- ⬜ MP4Box 混流支持
+- ⬜ MP4Box 混流支持（完整实现）
+- ⬜ 更多视频平台支持
 
 ## 安装
 
@@ -474,6 +477,89 @@ rvd BV1xx411c7mD --use-app-api
 rvd BV1xx411c7mD --use-intl-api
 ```
 
+### 杜比视界和杜比全景声支持
+
+RVD 支持下载杜比视界（Dolby Vision）视频和杜比全景声（Dolby Atmos）音频，以及 Hi-Res 无损音频（FLAC）。
+
+#### 自动识别
+
+当视频包含杜比音视频流时，RVD 会自动识别并在流选择时显示：
+
+```bash
+rvd BV1xx411c7mD -q "杜比视界,4K 超清,1080P"
+```
+
+可用的高级清晰度和音频格式：
+- **杜比视界** (quality_id: 126) - 需要支持 HDR 的显示器
+- **HDR 真彩** (quality_id: 125) - HDR10 格式
+- **E-AC-3 (Dolby)** - 杜比全景声音频
+- **FLAC (Hi-Res)** - 无损音频
+
+#### FFmpeg 版本要求
+
+杜比视界需要 FFmpeg 5.0 或更高版本才能正确处理元数据。RVD 会自动检测 FFmpeg 版本：
+
+```bash
+# 检查 FFmpeg 版本
+ffmpeg -version
+```
+
+如果您的 FFmpeg 版本低于 5.0，RVD 会显示警告：
+
+```
+⚠️  检测到杜比视界清晰度且您的FFmpeg版本小于5.0，建议使用mp4box混流或升级FFmpeg
+⚠️  当前将使用FFmpeg继续混流，但可能无法正确处理杜比视界元数据
+```
+
+#### 升级 FFmpeg
+
+**macOS (Homebrew):**
+```bash
+brew upgrade ffmpeg
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo add-apt-repository ppa:savoury1/ffmpeg5
+sudo apt update
+sudo apt install ffmpeg
+```
+
+**Windows:**
+从 [FFmpeg 官网](https://ffmpeg.org/download.html) 下载最新版本。
+
+#### 使用 MP4Box（可选）
+
+如果无法升级 FFmpeg，可以使用 MP4Box 进行混流：
+
+```bash
+rvd BV1xx411c7mD --use-mp4box
+```
+
+**注意**：MP4Box 的完整集成仍在开发中。当前版本会使用 FFmpeg 继续混流，但会显示警告。
+
+#### 示例
+
+下载杜比视界视频：
+
+```bash
+# 优先选择杜比视界
+rvd BV1xx411c7mD -q "杜比视界,4K 超清,1080P"
+
+# 使用 TV API 获取更高质量的流
+rvd BV1xx411c7mD --use-tv-api -q "杜比视界"
+
+# 交互式选择（可以看到所有可用的音视频流）
+rvd BV1xx411c7mD -i
+```
+
+下载杜比全景声音频：
+
+```bash
+# 音频编码优先级（E-AC-3 是杜比全景声）
+rvd BV1xx411c7mD -c "E-AC-3,FLAC,M4A"
+```
+
 ## 命令行参数
 
 ```
@@ -560,6 +646,18 @@ Options:
 
       --login-tv
           使用二维码登录（TV模式，获取access_token）
+
+      --use-aria2c
+          使用 aria2c 进行下载（更快的下载速度）
+
+      --aria2c-path <PATH>
+          指定 aria2c 可执行文件路径
+
+      --aria2c-args <ARGS>
+          自定义 aria2c 参数（例如："-x8 -s8 -j8"）
+
+      --use-mp4box
+          使用 MP4Box 进行混流（推荐用于杜比视界且 FFmpeg < 5.0）
 
   -v, --verbose
           启用详细日志输出

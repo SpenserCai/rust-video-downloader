@@ -111,6 +111,10 @@ pub struct Cli {
     /// Custom aria2c arguments (e.g., "-x8 -s8")
     #[arg(long)]
     pub aria2c_args: Option<String>,
+
+    /// Use MP4Box for muxing (recommended for Dolby Vision with FFmpeg < 5.0)
+    #[arg(long)]
+    pub use_mp4box: bool,
 }
 
 impl Cli {

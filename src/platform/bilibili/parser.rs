@@ -291,6 +291,7 @@ pub async fn get_play_url_with_mode_and_ep(
             });
         }
 
+        // 处理普通音频流
         for audio in dash.audio {
             let codec = if let Some(ref codecs) = audio.codecs {
                 match codecs.as_str() {
@@ -312,6 +313,56 @@ pub async fn get_play_url_with_mode_and_ep(
                 size: 0,
                 bandwidth: audio.bandwidth,
             });
+        }
+
+        // 处理杜比全景声 (Dolby Atmos)
+        if let Some(dolby) = dash.dolby {
+            if let Some(dolby_audios) = dolby.audio {
+                for audio in dolby_audios {
+                    let codec = if let Some(ref codecs) = audio.codecs {
+                        match codecs.as_str() {
+                            "ec-3" => "E-AC-3 (Dolby)",
+                            _ => codecs.as_str(),
+                        }
+                    } else {
+                        "E-AC-3 (Dolby)"
+                    };
+
+                    streams.push(Stream {
+                        stream_type: StreamType::Audio,
+                        quality: format!("{}kbps (Dolby)", audio.bandwidth / 1000),
+                        quality_id: audio.id,
+                        codec: codec.to_string(),
+                        url: audio.base_url.clone(),
+                        size: 0,
+                        bandwidth: audio.bandwidth,
+                    });
+                }
+            }
+        }
+
+        // 处理Hi-Res无损音频 (FLAC)
+        if let Some(flac) = dash.flac {
+            if let Some(flac_audio) = flac.audio {
+                let codec = if let Some(ref codecs) = flac_audio.codecs {
+                    match codecs.as_str() {
+                        "fLaC" => "FLAC (Hi-Res)",
+                        _ => codecs.as_str(),
+                    }
+                } else {
+                    "FLAC (Hi-Res)"
+                };
+
+                streams.push(Stream {
+                    stream_type: StreamType::Audio,
+                    quality: format!("{}kbps (Hi-Res)", flac_audio.bandwidth / 1000),
+                    quality_id: flac_audio.id,
+                    codec: codec.to_string(),
+                    url: flac_audio.base_url.clone(),
+                    size: 0,
+                    bandwidth: flac_audio.bandwidth,
+                });
+            }
         }
     }
 
