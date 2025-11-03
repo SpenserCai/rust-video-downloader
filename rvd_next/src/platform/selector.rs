@@ -258,6 +258,30 @@ impl Default for StreamSelector {
     }
 }
 
+/// Convenience function to select best streams
+///
+/// This is a convenience wrapper around `StreamSelector::select_best`.
+///
+/// # Arguments
+///
+/// * `streams` - Available streams
+/// * `preferences` - Stream selection preferences
+///
+/// # Returns
+///
+/// A tuple of (video_stream, audio_stream)
+///
+/// # Errors
+///
+/// Returns an error if no suitable streams are found.
+pub fn select_best_streams(
+    streams: &[Stream],
+    preferences: &StreamPreferences,
+) -> Result<(Stream, Stream)> {
+    let selector = StreamSelector::new(preferences.clone());
+    selector.select_best(streams)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

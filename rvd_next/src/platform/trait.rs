@@ -327,6 +327,120 @@ pub trait Platform: Send + Sync {
         Ok(false)
     }
 
+    /// Get video chapters
+    ///
+    /// Retrieves chapter information for a video. Chapters allow users to quickly
+    /// navigate to specific sections of a video.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - Stream context containing video ID and platform-specific parameters
+    ///
+    /// # Returns
+    ///
+    /// A vector of `Chapter` objects. Returns an empty vector if the video has no chapters
+    /// or if the platform doesn't support chapters.
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns an empty vector, indicating no chapter support.
+    async fn get_chapters(&self, context: &StreamContext) -> Result<Vec<crate::types::Chapter>> {
+        let _ = context;
+        Ok(Vec::new())
+    }
+
+    /// Select the best video and audio streams
+    ///
+    /// Selects the best video and audio streams from the available streams based on
+    /// user preferences. Different platforms may have different quality mappings and
+    /// selection strategies.
+    ///
+    /// # Arguments
+    ///
+    /// * `streams` - Available streams
+    /// * `preferences` - User's stream preferences (quality and codec priorities)
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (video_stream, audio_stream)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no suitable streams are found.
+    ///
+    /// # Default Implementation
+    ///
+    /// Uses the generic stream selector from `crate::platform::selector`.
+    fn select_best_streams(
+        &self,
+        streams: &[Stream],
+        preferences: &crate::types::StreamPreferences,
+    ) -> Result<(Stream, Stream)> {
+        crate::platform::selector::select_best_streams(streams, preferences)
+    }
+
+    /// Get danmaku (bullet comments) content
+    ///
+    /// Downloads and formats danmaku content. Danmaku are scrolling comments that
+    /// appear on top of videos, popular in Asian video platforms.
+    ///
+    /// # Arguments
+    ///
+    /// * `context` - Stream context containing video ID and platform-specific parameters
+    /// * `format` - Desired danmaku format (XML or ASS)
+    ///
+    /// # Returns
+    ///
+    /// `Some(formatted_content)` if danmaku is available, `None` otherwise
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns `None`, indicating no danmaku support.
+    async fn get_danmaku(
+        &self,
+        context: &StreamContext,
+        format: crate::core::danmaku::DanmakuFormat,
+    ) -> Result<Option<String>> {
+        let _ = (context, format);
+        Ok(None)
+    }
+
+    /// Customize download request headers
+    ///
+    /// Allows platforms to customize HTTP request headers for specific URLs.
+    /// This is useful for platforms that require special headers like Referer or User-Agent.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL to be downloaded
+    ///
+    /// # Returns
+    ///
+    /// `Some(HeaderMap)` if custom headers are needed, `None` otherwise
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns `None`, indicating no custom headers are needed.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // In your platform implementation:
+    /// fn customize_download_headers(&self, url: &str) -> Option<reqwest::header::HeaderMap> {
+    ///     if url.contains("myplatform.com") {
+    ///         let mut headers = reqwest::header::HeaderMap::new();
+    ///         headers.insert("Referer", "https://www.myplatform.com".parse().unwrap());
+    ///         Some(headers)
+    ///     } else {
+    ///         None
+    ///     }
+    /// }
+    /// ```
+    fn customize_download_headers(&self, url: &str) -> Option<reqwest::header::HeaderMap> {
+        let _ = url;
+        None
+    }
+
     /// Runtime type conversion support
     ///
     /// Allows downcasting to the concrete platform type for accessing

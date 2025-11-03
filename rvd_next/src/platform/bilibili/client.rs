@@ -332,3 +332,103 @@ fn get_codec_name(codec_id: u32) -> &'static str {
         _ => "Unknown",
     }
 }
+
+/// Get danmaku (bullet comments) for a video
+///
+/// Downloads and formats Bilibili danmaku content.
+///
+/// # Arguments
+///
+/// * `client` - HTTP client
+/// * `cid` - Video CID
+/// * `format` - Desired danmaku format (XML or ASS)
+///
+/// # Returns
+///
+/// Formatted danmaku content as a string
+pub async fn get_danmaku(
+    _client: &Arc<HttpClient>,
+    cid: &str,
+    format: crate::core::danmaku::DanmakuFormat,
+) -> Result<String> {
+    use crate::core::danmaku::{convert_xml_to_ass, format_xml, DanmakuFormat};
+
+    // Download XML format danmaku
+    let api = format!("https://comment.bilibili.com/{}.xml", cid);
+    tracing::debug!("Fetching danmaku from: {}", api);
+
+    // Create a client with automatic decompression disabled
+    // We need to manually decompress because Bilibili's deflate encoding causes issues with reqwest
+    let raw_client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .timeout(std::time::Duration::from_secs(60))
+        .no_gzip()
+        .no_deflate()
+        .no_brotli()
+        .build()
+        .map_err(DownloaderError::Network)?;
+
+    let response = raw_client.get(&api).send().await?;
+
+    if !response.status().is_success() {
+        return Err(DownloaderError::DownloadFailed(format!(
+            "Failed to fetch danmaku: HTTP {}",
+            response.status()
+        )));
+    }
+
+    let bytes = response.bytes().await?;
+
+    // Decompress XML content
+    let xml_content = decompress_danmaku(&bytes)?;
+
+    if xml_content.is_empty() || !xml_content.contains("<d ") {
+        tracing::info!("No danmaku available for cid: {}", cid);
+        return Ok(String::new());
+    }
+
+    // Format according to requested format
+    match format {
+        DanmakuFormat::Xml => format_xml(&xml_content),
+        DanmakuFormat::Ass => convert_xml_to_ass(&xml_content),
+    }
+}
+
+/// Decompress danmaku data
+///
+/// Tries multiple decompression methods (UTF-8, deflate, gzip) to handle
+/// Bilibili's various compression formats.
+fn decompress_danmaku(bytes: &[u8]) -> Result<String> {
+    // Try to decode as UTF-8 directly first
+    match String::from_utf8(bytes.to_vec()) {
+        Ok(text) => Ok(text),
+        Err(_) => {
+            // Try deflate decompression (most common for Bilibili danmaku API)
+            use flate2::read::DeflateDecoder;
+            use std::io::Read;
+
+            let mut decoder = DeflateDecoder::new(bytes);
+            let mut decompressed = String::new();
+            match decoder.read_to_string(&mut decompressed) {
+                Ok(_) => {
+                    tracing::debug!("Decompressed danmaku with deflate");
+                    Ok(decompressed)
+                }
+                Err(_) => {
+                    // Try gzip as fallback
+                    use flate2::read::GzDecoder;
+                    let mut decoder = GzDecoder::new(bytes);
+                    let mut decompressed = String::new();
+                    decoder.read_to_string(&mut decompressed).map_err(|e| {
+                        DownloaderError::DownloadFailed(format!(
+                            "Failed to decompress danmaku: {}",
+                            e
+                        ))
+                    })?;
+                    tracing::debug!("Decompressed danmaku with gzip");
+                    Ok(decompressed)
+                }
+            }
+        }
+    }
+}

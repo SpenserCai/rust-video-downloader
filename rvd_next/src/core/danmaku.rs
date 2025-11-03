@@ -1,108 +1,31 @@
-use crate::error::Result;
-use crate::utils::http::HttpClient;
-use std::path::Path;
-use std::sync::Arc;
+//! Danmaku format conversion utilities
+//!
+//! This module provides utility functions for converting danmaku (bullet comments)
+//! between different formats. It does not contain platform-specific download logic.
+//! Platforms should implement their own danmaku download logic and use these utilities
+//! for format conversion.
 
-/// 弹幕格式
+use crate::error::Result;
+
+/// Danmaku format
 #[derive(Debug, Clone, Copy)]
 pub enum DanmakuFormat {
     Xml,
     Ass,
 }
 
-/// 下载弹幕
-pub async fn download_danmaku(
-    _client: &Arc<HttpClient>,
-    cid: &str,
-    output: &Path,
-    format: DanmakuFormat,
-) -> Result<()> {
-    // 下载 XML 格式弹幕
-    let api = format!("https://comment.bilibili.com/{}.xml", cid);
-    tracing::debug!("Fetching danmaku from: {}", api);
-
-    // Create a client with automatic decompression disabled
-    // We need to manually decompress because Bilibili's deflate encoding causes issues with reqwest
-    let raw_client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .timeout(std::time::Duration::from_secs(60))
-        .no_gzip()
-        .no_deflate()
-        .no_brotli()
-        .build()
-        .map_err(crate::error::DownloaderError::Network)?;
-
-    let response = raw_client.get(&api).send().await?;
-
-    if !response.status().is_success() {
-        return Err(crate::error::DownloaderError::DownloadFailed(format!(
-            "Failed to fetch danmaku: HTTP {}",
-            response.status()
-        )));
-    }
-
-    tracing::debug!("Response status: {}", response.status());
-
-    let bytes = response.bytes().await?;
-
-    // Try to decode as UTF-8 directly first, or decompress if needed
-    let xml_content = match String::from_utf8(bytes.to_vec()) {
-        Ok(text) => text,
-        Err(_) => {
-            // Try deflate decompression (most common for Bilibili danmaku API)
-            use flate2::read::DeflateDecoder;
-            use std::io::Read;
-
-            let mut decoder = DeflateDecoder::new(&bytes[..]);
-            let mut decompressed = String::new();
-            match decoder.read_to_string(&mut decompressed) {
-                Ok(_) => {
-                    tracing::debug!("Decompressed danmaku with deflate");
-                    decompressed
-                }
-                Err(_) => {
-                    // Try gzip as fallback
-                    use flate2::read::GzDecoder;
-                    let mut decoder = GzDecoder::new(&bytes[..]);
-                    let mut decompressed = String::new();
-                    decoder.read_to_string(&mut decompressed).map_err(|e| {
-                        crate::error::DownloaderError::DownloadFailed(format!(
-                            "Failed to decompress danmaku: {}",
-                            e
-                        ))
-                    })?;
-                    tracing::debug!("Decompressed danmaku with gzip");
-                    decompressed
-                }
-            }
-        }
-    };
-
-    if xml_content.is_empty() || !xml_content.contains("<d ") {
-        tracing::info!("No danmaku available for cid: {}", cid);
-        return Ok(());
-    }
-
-    match format {
-        DanmakuFormat::Xml => {
-            // 格式化并保存 XML
-            let formatted_xml = format_xml(&xml_content)?;
-            tokio::fs::write(output, formatted_xml).await?;
-            tracing::info!("Danmaku saved to: {:?}", output);
-        }
-        DanmakuFormat::Ass => {
-            // 转换为 ASS 格式
-            let ass_content = convert_xml_to_ass(&xml_content)?;
-            tokio::fs::write(output, ass_content).await?;
-            tracing::info!("Danmaku converted to ASS and saved to: {:?}", output);
-        }
-    }
-
-    Ok(())
-}
-
-/// 格式化 XML 弹幕
-fn format_xml(xml: &str) -> Result<String> {
+/// Format XML danmaku
+///
+/// Formats raw XML danmaku into a more readable format.
+///
+/// # Arguments
+///
+/// * `xml` - Raw XML danmaku content
+///
+/// # Returns
+///
+/// Formatted XML string
+pub fn format_xml(xml: &str) -> Result<String> {
     use quick_xml::events::Event;
     use quick_xml::Reader;
     use quick_xml::Writer;
@@ -139,7 +62,17 @@ fn format_xml(xml: &str) -> Result<String> {
     })
 }
 
-/// 解析 XML 弹幕
+/// Parse XML danmaku
+///
+/// Parses XML danmaku content into structured items.
+///
+/// # Arguments
+///
+/// * `xml` - XML danmaku content
+///
+/// # Returns
+///
+/// Vector of danmaku items
 fn parse_danmaku_xml(xml: &str) -> Result<Vec<DanmakuItem>> {
     let mut items = Vec::new();
 
@@ -172,15 +105,26 @@ fn parse_danmaku_xml(xml: &str) -> Result<Vec<DanmakuItem>> {
     Ok(items)
 }
 
-/// 转换 XML 弹幕为 ASS 格式
-fn convert_xml_to_ass(xml: &str) -> Result<String> {
+/// Convert XML danmaku to ASS format
+///
+/// Converts XML format danmaku to ASS subtitle format, which can be displayed
+/// in video players.
+///
+/// # Arguments
+///
+/// * `xml` - XML danmaku content
+///
+/// # Returns
+///
+/// ASS format subtitle string
+pub fn convert_xml_to_ass(xml: &str) -> Result<String> {
     let items = parse_danmaku_xml(xml)?;
 
     let mut ass = String::new();
 
-    // ASS 文件头
+    // ASS file header
     ass.push_str("[Script Info]\n");
-    ass.push_str("Title: Bilibili Danmaku\n");
+    ass.push_str("Title: Danmaku\n");
     ass.push_str("ScriptType: v4.00+\n");
     ass.push_str("Collisions: Normal\n");
     ass.push_str("PlayResX: 1920\n");
@@ -223,7 +167,17 @@ fn convert_xml_to_ass(xml: &str) -> Result<String> {
     Ok(ass)
 }
 
-/// 格式化时间为 ASS 格式 (H:MM:SS.CC)
+/// Format time to ASS format (H:MM:SS.CC)
+///
+/// Converts seconds to ASS subtitle time format.
+///
+/// # Arguments
+///
+/// * `seconds` - Time in seconds
+///
+/// # Returns
+///
+/// Formatted time string
 fn format_ass_time(seconds: f64) -> String {
     let hours = (seconds / 3600.0) as u32;
     let minutes = ((seconds % 3600.0) / 60.0) as u32;
@@ -233,7 +187,9 @@ fn format_ass_time(seconds: f64) -> String {
     format!("{}:{:02}:{:02}.{:02}", hours, minutes, secs, centisecs)
 }
 
-/// 弹幕项
+/// Danmaku item
+///
+/// Represents a single danmaku comment with its properties.
 #[derive(Debug, Clone)]
 struct DanmakuItem {
     time: f64,

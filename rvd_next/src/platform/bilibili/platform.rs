@@ -159,6 +159,71 @@ impl Platform for BilibiliPlatform {
         video_info.cover_url.clone()
     }
 
+    async fn get_chapters(
+        &self,
+        context: &StreamContext,
+    ) -> Result<Vec<crate::types::Chapter>> {
+        let video_id = &context.video_id;
+        let cid = context
+            .get_str("cid")
+            .ok_or_else(|| DownloaderError::Parse("Missing cid in StreamContext".to_string()))?;
+
+        // Call parser module's fetch_chapters
+        super::parser::fetch_chapters(&self.client, video_id, cid).await
+    }
+
+    fn select_best_streams(
+        &self,
+        streams: &[crate::types::Stream],
+        preferences: &crate::types::StreamPreferences,
+    ) -> Result<(crate::types::Stream, crate::types::Stream)> {
+        // Use Bilibili-specific stream selector
+        // It includes Bilibili-specific quality mapping and Dolby audio support
+        super::selector::select_best_streams(streams, preferences)
+    }
+
+    async fn get_danmaku(
+        &self,
+        context: &StreamContext,
+        format: crate::core::danmaku::DanmakuFormat,
+    ) -> Result<Option<String>> {
+        let cid = context
+            .get_str("cid")
+            .ok_or_else(|| DownloaderError::Parse("Missing cid in StreamContext".to_string()))?;
+
+        match super::client::get_danmaku(&self.client, cid, format).await {
+            Ok(content) if !content.is_empty() => Ok(Some(content)),
+            Ok(_) => Ok(None),
+            Err(e) => {
+                tracing::warn!("Failed to get danmaku: {}", e);
+                Ok(None)
+            }
+        }
+    }
+
+    fn customize_download_headers(&self, url: &str) -> Option<reqwest::header::HeaderMap> {
+        // Only add custom headers for bilivideo.com URLs (Bilibili CDN)
+        if url.contains("bilivideo.com") {
+            let mut headers = reqwest::header::HeaderMap::new();
+
+            // Bilibili CDN requires Referer header
+            if let Ok(value) = "https://www.bilibili.com".parse() {
+                headers.insert("Referer", value);
+            }
+
+            // Add User-Agent
+            if let Ok(value) =
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".parse()
+            {
+                headers.insert("User-Agent", value);
+            }
+
+            Some(headers)
+        } else {
+            None
+        }
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

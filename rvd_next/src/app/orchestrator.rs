@@ -12,8 +12,7 @@ use crate::core::muxer::Muxer;
 use crate::core::progress::ProgressTracker;
 use crate::core::subtitle;
 use crate::error::{DownloaderError, Result};
-use crate::platform::bilibili::parser;
-use crate::platform::bilibili::selector::select_best_streams;
+
 use crate::platform::{Platform, PlatformFeature};
 use crate::types::{Auth, BatchType, Page, Stream, StreamPreferences, StreamType, VideoInfo};
 use crate::utils::config::Config;
@@ -206,9 +205,7 @@ impl Orchestrator {
         loop {
             let batch_result = if let Some(ref cont) = continuation {
                 tracing::debug!("Fetching page {} with continuation: {}", page_num, cont);
-                platform
-                    .parse_batch_page(url, Some(cont), auth)
-                    .await?
+                platform.parse_batch_page(url, Some(cont), auth).await?
             } else {
                 tracing::debug!("Fetching first page");
                 platform.parse_batch(url, auth).await?
@@ -247,7 +244,10 @@ impl Orchestrator {
                         page_info.current_page, total_pages, video_count
                     );
                 } else {
-                    println!("📄 正在获取第{}页 ({} 个视频)", page_info.current_page, video_count);
+                    println!(
+                        "📄 正在获取第{}页 ({} 个视频)",
+                        page_info.current_page, video_count
+                    );
                 }
             } else if page_num > 1 {
                 println!("📄 正在获取第{}页 ({} 个视频)", page_num, video_count);
@@ -323,7 +323,10 @@ impl Orchestrator {
         }
 
         self.progress.finish_all();
-        println!("\n✓ All {} video(s) downloaded successfully!", all_videos.len());
+        println!(
+            "\n✓ All {} video(s) downloaded successfully!",
+            all_videos.len()
+        );
 
         Ok(())
     }
@@ -392,21 +395,13 @@ impl Orchestrator {
         let cookie = cli
             .cookie
             .clone()
-            .or_else(|| {
-                auth_from_file
-                    .as_ref()
-                    .and_then(|a| a.cookie.clone())
-            })
+            .or_else(|| auth_from_file.as_ref().and_then(|a| a.cookie.clone()))
             .or_else(|| self.config.auth.as_ref().and_then(|a| a.cookie.clone()));
 
         let access_token = cli
             .access_token
             .clone()
-            .or_else(|| {
-                auth_from_file
-                    .as_ref()
-                    .and_then(|a| a.access_token.clone())
-            })
+            .or_else(|| auth_from_file.as_ref().and_then(|a| a.access_token.clone()))
             .or_else(|| {
                 self.config
                     .auth
@@ -552,26 +547,19 @@ impl Orchestrator {
         // Create StreamContext using the convenient method
         let context = page.to_stream_context(&video_info.aid.to_string());
 
-        // Get chapters early (before downloading) - Bilibili specific
+        // Get chapters early (before downloading)
         let chapters = if platform.supports_feature(PlatformFeature::Chapters) {
-            // For Bilibili, we can use the parser directly
-            if let Some(cid) = context.get_str("cid") {
-                match parser::fetch_chapters(&self.http_client, &video_info.aid.to_string(), cid)
-                    .await
-                {
-                    Ok(chapters) => {
-                        if !chapters.is_empty() {
-                            tracing::debug!("Found {} chapter(s)", chapters.len());
-                        }
-                        chapters
+            match platform.get_chapters(&context).await {
+                Ok(chapters) => {
+                    if !chapters.is_empty() {
+                        tracing::debug!("Found {} chapter(s)", chapters.len());
                     }
-                    Err(e) => {
-                        tracing::debug!("Failed to fetch chapters: {}", e);
-                        Vec::new()
-                    }
+                    chapters
                 }
-            } else {
-                Vec::new()
+                Err(e) => {
+                    tracing::debug!("Failed to fetch chapters: {}", e);
+                    Vec::new()
+                }
             }
         } else {
             Vec::new()
@@ -590,7 +578,7 @@ impl Orchestrator {
         let (video_stream, audio_stream) = if cli.interactive {
             self.interactive_select_streams(&streams)?
         } else {
-            select_best_streams(&streams, preferences)?
+            platform.select_best_streams(&streams, preferences)?
         };
 
         // Create temp directory
@@ -612,11 +600,20 @@ impl Orchestrator {
             self.downloader.clone()
         };
 
+        // Get platform-specific download headers
+        let video_headers = platform.customize_download_headers(&video_stream.url);
+        let audio_headers = platform.customize_download_headers(&audio_stream.url);
+
         // Download video
         let video_path = temp_dir.join("video.m4s");
         let video_pb = self.progress.create_bar("Video", 0);
         downloader_with_auth
-            .download(&video_stream.url, &video_path, Some(video_pb.clone()))
+            .download(
+                &video_stream.url,
+                &video_path,
+                video_headers,
+                Some(video_pb.clone()),
+            )
             .await?;
         self.progress.finish("Video", "✓ Video downloaded");
 
@@ -624,7 +621,12 @@ impl Orchestrator {
         let audio_path = temp_dir.join("audio.m4s");
         let audio_pb = self.progress.create_bar("Audio", 0);
         downloader_with_auth
-            .download(&audio_stream.url, &audio_path, Some(audio_pb.clone()))
+            .download(
+                &audio_stream.url,
+                &audio_path,
+                audio_headers,
+                Some(audio_pb.clone()),
+            )
             .await?;
         self.progress.finish("Audio", "✓ Audio downloaded");
 
@@ -652,33 +654,27 @@ impl Orchestrator {
         // Download danmaku (check platform support)
         let danmaku_temp_path =
             if cli.download_danmaku && platform.supports_feature(PlatformFeature::Danmaku) {
-                if let Some(cid) = context.get_str("cid") {
-                    let danmaku_format = cli.get_danmaku_format();
-                    let danmaku_ext = match danmaku_format {
-                        danmaku::DanmakuFormat::Xml => "xml",
-                        danmaku::DanmakuFormat::Ass => "ass",
-                    };
-                    let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
+                let danmaku_format = cli.get_danmaku_format();
+                let danmaku_ext = match danmaku_format {
+                    danmaku::DanmakuFormat::Xml => "xml",
+                    danmaku::DanmakuFormat::Ass => "ass",
+                };
+                let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
 
-                    match danmaku::download_danmaku(
-                        &self.http_client,
-                        cid,
-                        &danmaku_path,
-                        danmaku_format,
-                    )
-                    .await
-                    {
-                        Ok(()) => {
-                            println!("  ✓ Danmaku downloaded");
-                            Some(danmaku_path)
-                        }
-                        Err(e) => {
-                            tracing::warn!("Failed to download danmaku: {}", e);
-                            None
-                        }
+                match platform.get_danmaku(&context, danmaku_format).await {
+                    Ok(Some(content)) => {
+                        tokio::fs::write(&danmaku_path, content).await?;
+                        println!("  ✓ Danmaku downloaded");
+                        Some(danmaku_path)
                     }
-                } else {
-                    None
+                    Ok(None) => {
+                        tracing::debug!("No danmaku available");
+                        None
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to download danmaku: {}", e);
+                        None
+                    }
                 }
             } else {
                 None
@@ -687,10 +683,11 @@ impl Orchestrator {
         // Download cover
         let _cover_path = if !cli.skip_cover {
             let cover_url = platform.get_cover(video_info);
+            let cover_headers = platform.customize_download_headers(&cover_url);
             let cover_path = temp_dir.join("cover.jpg");
             if self
                 .downloader
-                .download(&cover_url, &cover_path, None)
+                .download(&cover_url, &cover_path, cover_headers, None)
                 .await
                 .is_ok()
             {

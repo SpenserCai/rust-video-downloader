@@ -5,8 +5,9 @@ use serde::Deserialize;
 use std::path::Path;
 use std::sync::Arc;
 
+/// JSON subtitle format (used by multiple platforms)
 #[derive(Debug, Deserialize)]
-struct BilibiliSubtitle {
+struct JsonSubtitle {
     body: Vec<SubtitleItem>,
 }
 
@@ -33,11 +34,11 @@ pub async fn download_and_convert_subtitle(
     let json_text = response.text().await?;
 
     // Parse JSON
-    let bili_subtitle: BilibiliSubtitle = serde_json::from_str(&json_text)
+    let json_subtitle: JsonSubtitle = serde_json::from_str(&json_text)
         .map_err(|e| DownloaderError::Parse(format!("Failed to parse subtitle: {}", e)))?;
 
     // Convert to SRT format
-    let srt_content = convert_to_srt(&bili_subtitle);
+    let srt_content = convert_to_srt(&json_subtitle);
 
     // Write to file
     tokio::fs::write(output, srt_content).await?;
@@ -46,7 +47,7 @@ pub async fn download_and_convert_subtitle(
     Ok(())
 }
 
-fn convert_to_srt(subtitle: &BilibiliSubtitle) -> String {
+fn convert_to_srt(subtitle: &JsonSubtitle) -> String {
     let mut srt = String::new();
 
     for (index, item) in subtitle.body.iter().enumerate() {
