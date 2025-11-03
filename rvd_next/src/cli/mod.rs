@@ -115,6 +115,10 @@ pub struct Cli {
     /// Use MP4Box for muxing (recommended for Dolby Vision with FFmpeg < 5.0)
     #[arg(long)]
     pub use_mp4box: bool,
+
+    /// Maximum number of videos to download in batch mode (safety limit)
+    #[arg(long)]
+    pub batch_limit: Option<usize>,
 }
 
 impl Cli {
