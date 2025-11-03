@@ -1,0 +1,334 @@
+//! Bilibili API client
+//!
+//! This module provides functions for calling Bilibili APIs.
+
+use super::api::*;
+use super::ApiMode;
+use crate::error::{DownloaderError, Result};
+use crate::types::{Auth, Stream, StreamType, Subtitle};
+use crate::utils::http::HttpClient;
+use std::sync::Arc;
+
+/// Get play URL for a video
+pub async fn get_play_url(
+    client: &Arc<HttpClient>,
+    video_id: &str,
+    cid: &str,
+    ep_id: Option<&str>,
+    auth: Option<&Auth>,
+    api_mode: ApiMode,
+) -> Result<Vec<Stream>> {
+    let is_bangumi = ep_id.is_some();
+
+    let api = match api_mode {
+        ApiMode::Web => {
+            if is_bangumi {
+                // 番剧使用不同的API端点
+                let ep_param = ep_id.unwrap();
+                format!(
+                    "https://api.bilibili.com/pgc/player/web/v2/playurl?support_multi_audio=true&avid={}&cid={}&ep_id={}&fnval=4048&fnver=0&fourk=1&qn=127",
+                    video_id, cid, ep_param
+                )
+            } else {
+                format!(
+                    "https://api.bilibili.com/x/player/wbi/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                    video_id, cid
+                )
+            }
+        }
+        ApiMode::TV => {
+            if is_bangumi {
+                let ep_param = ep_id.unwrap();
+                format!(
+                    "https://api.snm0516.aisee.tv/pgc/player/api/playurltv?avid={}&cid={}&ep_id={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                    video_id, cid, ep_param
+                )
+            } else {
+                format!(
+                    "https://api.snm0516.aisee.tv/x/tv/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                    video_id, cid
+                )
+            }
+        }
+        ApiMode::App => {
+            // APP API 需要特殊的签名，这里使用简化版本
+            format!(
+                "https://app.bilibili.com/x/v2/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                video_id, cid
+            )
+        }
+        ApiMode::International => {
+            format!(
+                "https://app.global.bilibili.com/intl/gateway/v2/ogv/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
+                video_id, cid
+            )
+        }
+    };
+
+    let response = client.get_with_auth(&api, auth).await?;
+    let json_text = response.text().await?;
+
+    tracing::debug!("Play URL response: {}", json_text);
+
+    // 番剧API返回result字段，普通视频返回data字段
+    let data = if is_bangumi {
+        let api_response: BangumiApiResponse<BangumiPlayUrlResult> =
+            serde_json::from_str(&json_text).map_err(|e| {
+                DownloaderError::Parse(format!("Failed to parse bangumi play URL: {}", e))
+            })?;
+
+        if api_response.code != 0 {
+            return Err(DownloaderError::Api(format!(
+                "API error: {}",
+                api_response.message
+            )));
+        }
+
+        api_response
+            .result
+            .ok_or_else(|| DownloaderError::DownloadFailed("No play URL data".to_string()))?
+            .video_info
+    } else {
+        let api_response: ApiResponse<PlayUrlData> = serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse play URL: {}", e)))?;
+
+        if api_response.code != 0 {
+            return Err(DownloaderError::Api(format!(
+                "API error: {}",
+                api_response.message
+            )));
+        }
+
+        api_response
+            .data
+            .ok_or_else(|| DownloaderError::DownloadFailed("No play URL data".to_string()))?
+    };
+
+    let mut streams = Vec::new();
+
+    if let Some(dash) = data.dash {
+        // DASH format (separate video and audio)
+        for video in dash.video {
+            let quality_name = get_quality_name(video.id);
+            let codec = get_codec_name(video.codecid.unwrap_or(7));
+
+            streams.push(Stream {
+                stream_type: StreamType::Video,
+                quality: quality_name.to_string(),
+                quality_id: video.id,
+                codec: codec.to_string(),
+                url: video.base_url.clone(),
+                size: 0, // Size not provided in API
+                bandwidth: video.bandwidth,
+                extra_data: None,
+            });
+        }
+
+        // 处理普通音频流
+        for audio in dash.audio {
+            let codec = if let Some(ref codecs) = audio.codecs {
+                match codecs.as_str() {
+                    "mp4a.40.2" | "mp4a.40.5" => "M4A",
+                    "ec-3" => "E-AC-3",
+                    "fLaC" => "FLAC",
+                    _ => codecs.as_str(),
+                }
+            } else {
+                "M4A"
+            };
+
+            streams.push(Stream {
+                stream_type: StreamType::Audio,
+                quality: format!("{}kbps", audio.bandwidth / 1000),
+                quality_id: audio.id,
+                codec: codec.to_string(),
+                url: audio.base_url.clone(),
+                size: 0,
+                bandwidth: audio.bandwidth,
+                extra_data: None,
+            });
+        }
+
+        // 处理杜比全景声 (Dolby Atmos)
+        if let Some(dolby) = dash.dolby {
+            if let Some(dolby_audios) = dolby.audio {
+                for audio in dolby_audios {
+                    let codec = if let Some(ref codecs) = audio.codecs {
+                        match codecs.as_str() {
+                            "ec-3" => "E-AC-3 (Dolby)",
+                            _ => codecs.as_str(),
+                        }
+                    } else {
+                        "E-AC-3 (Dolby)"
+                    };
+
+                    streams.push(Stream {
+                        stream_type: StreamType::Audio,
+                        quality: format!("{}kbps (Dolby)", audio.bandwidth / 1000),
+                        quality_id: audio.id,
+                        codec: codec.to_string(),
+                        url: audio.base_url.clone(),
+                        size: 0,
+                        bandwidth: audio.bandwidth,
+                        extra_data: None,
+                    });
+                }
+            }
+        }
+
+        // 处理Hi-Res无损音频 (FLAC)
+        if let Some(flac) = dash.flac {
+            if let Some(flac_audio) = flac.audio {
+                let codec = if let Some(ref codecs) = flac_audio.codecs {
+                    match codecs.as_str() {
+                        "fLaC" => "FLAC (Hi-Res)",
+                        _ => codecs.as_str(),
+                    }
+                } else {
+                    "FLAC (Hi-Res)"
+                };
+
+                streams.push(Stream {
+                    stream_type: StreamType::Audio,
+                    quality: format!("{}kbps (Hi-Res)", flac_audio.bandwidth / 1000),
+                    quality_id: flac_audio.id,
+                    codec: codec.to_string(),
+                    url: flac_audio.base_url.clone(),
+                    size: 0,
+                    bandwidth: flac_audio.bandwidth,
+                    extra_data: None,
+                });
+            }
+        }
+    }
+
+    if streams.is_empty() {
+        return Err(DownloaderError::DownloadFailed(
+            "No streams available".to_string(),
+        ));
+    }
+
+    Ok(streams)
+}
+
+/// Get subtitles for a video
+pub async fn get_subtitles(
+    client: &Arc<HttpClient>,
+    video_id: &str,
+    cid: &str,
+) -> Result<Vec<Subtitle>> {
+    let api = format!(
+        "https://api.bilibili.com/x/player/wbi/v2?aid={}&cid={}",
+        video_id, cid
+    );
+
+    let response = client.get(&api, None).await?;
+    let json_text = response.text().await?;
+
+    tracing::debug!("Subtitle response: {}", json_text);
+
+    let api_response: ApiResponse<SubtitleData> = serde_json::from_str(&json_text)
+        .map_err(|e| DownloaderError::Parse(format!("Failed to parse subtitles: {}", e)))?;
+
+    if api_response.code != 0 {
+        // Subtitles are optional, so we just return empty vec on error
+        return Ok(Vec::new());
+    }
+
+    let data = match api_response.data {
+        Some(d) => d,
+        None => return Ok(Vec::new()),
+    };
+
+    let subtitles = data
+        .subtitle
+        .subtitles
+        .into_iter()
+        .map(|s| Subtitle {
+            language: s.lan_doc,
+            language_code: s.lan,
+            url: if s.subtitle_url.starts_with("http") {
+                s.subtitle_url
+            } else {
+                format!("https:{}", s.subtitle_url)
+            },
+        })
+        .collect();
+
+    Ok(subtitles)
+}
+
+/// Get chapters for a video
+pub async fn fetch_chapters(
+    client: &Arc<HttpClient>,
+    aid: &str,
+    cid: &str,
+) -> Result<Vec<(String, u64, u64)>> {
+    let api = format!(
+        "https://api.bilibili.com/x/player/v2?aid={}&cid={}",
+        aid, cid
+    );
+
+    let response = client.get(&api, None).await?;
+    let json_text = response.text().await?;
+
+    tracing::debug!("Chapter response: {}", json_text);
+
+    let api_response: ApiResponse<ViewPointData> = serde_json::from_str(&json_text)
+        .map_err(|e| DownloaderError::Parse(format!("Failed to parse chapters: {}", e)))?;
+
+    if api_response.code != 0 {
+        return Ok(Vec::new());
+    }
+
+    let data = match api_response.data {
+        Some(d) => d,
+        None => return Ok(Vec::new()),
+    };
+
+    let view_points = match data.view_points {
+        Some(vp) => vp,
+        None => return Ok(Vec::new()),
+    };
+
+    let chapters = view_points
+        .into_iter()
+        .map(|vp| (vp.content, vp.from, vp.to))
+        .collect();
+
+    Ok(chapters)
+}
+
+// Helper functions
+
+const QUALITY_MAP: &[(&str, u32)] = &[
+    ("8K 超高清", 127),
+    ("杜比视界", 126),
+    ("HDR 真彩", 125),
+    ("4K 超清", 120),
+    ("1080P 60帧", 116),
+    ("1080P 高码率", 112),
+    ("1080P 高清", 80),
+    ("720P 60帧", 74),
+    ("720P 高清", 64),
+    ("480P 清晰", 32),
+    ("360P 流畅", 16),
+];
+
+fn get_quality_name(quality_id: u32) -> &'static str {
+    for (name, id) in QUALITY_MAP {
+        if *id == quality_id {
+            return name;
+        }
+    }
+    "未知画质"
+}
+
+fn get_codec_name(codec_id: u32) -> &'static str {
+    match codec_id {
+        7 => "AVC",
+        12 => "HEVC",
+        13 => "AV1",
+        _ => "Unknown",
+    }
+}
