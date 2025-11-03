@@ -40,3 +40,6 @@ QUICKSTART.md
 tests/test_data/
 
 rvd_next/target
+
+rvd_next/e2e_test_platform/venv
+e2e_test_platform/venv
