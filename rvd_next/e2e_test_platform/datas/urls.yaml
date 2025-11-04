@@ -1,0 +1,50 @@
+# 测试URL配置文件
+# 请将占位符替换为实际的URL
+
+# 单视频下载测试
+single_video:
+  # 普通视频URL（BV号或完整URL）
+  url: "https://www.bilibili.com/video/BV16vpizyEpY"
+  description: "用于测试单视频下载功能"
+
+# 批量下载测试
+batch_download:
+  # 播放列表/收藏夹URL
+  playlist_url: "https://www.bilibili.com/bangumi/play/ss46085"
+  expected_count: 12  # 预期视频数量
+  description: "用于测试批量下载功能"
+
+# 质量选择测试
+quality_selection:
+  # 支持多种质量的视频URL
+  url: "https://www.bilibili.com/video/BV16vpizyEpY"
+  qualities: ["1080P", "720P", "480P"]
+  description: "用于测试质量选择功能"
+
+# 弹幕下载测试
+danmaku:
+  # 有弹幕的视频URL
+  url: "https://www.bilibili.com/video/BV16vpizyEpY"
+  description: "用于测试弹幕下载功能"
+
+# 字幕下载测试
+subtitle:
+  # 有字幕的视频URL
+  url: "PLACEHOLDER_VIDEO_URL"
+  description: "用于测试字幕下载功能"
+
+# 章节测试
+chapters:
+  # 有章节信息的视频URL
+  url: "PLACEHOLDER_VIDEO_URL"
+  description: "用于测试章节信息提取"
+
+# 错误处理测试
+error_handling:
+  # 无效URL
+  invalid_url: "https://invalid.example.com/video/123"
+  
+  # 不存在的视频
+  not_found_url: "BV1xx411c0000"
+  
+  description: "用于测试错误处理"

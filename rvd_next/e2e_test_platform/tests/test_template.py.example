@@ -1,0 +1,123 @@
+"""测试用例模板
+
+复制此文件并重命名为 test_your_feature.py 来创建新的测试用例
+"""
+import yaml
+from typing import List
+
+from core.base_test import BaseTestCase, TestResult
+from validators.output import OutputValidator
+from validators.file import FileValidator
+from validators.content import ContentValidator
+
+
+class TestYourFeature(BaseTestCase):
+    """测试你的功能
+    
+    在这里描述测试的目的和验证内容
+    """
+    
+    def __init__(self, config):
+        super().__init__(config)
+        
+        # 设置标签（用于过滤）
+        self.tags = ['feature', 'your-tag']
+        
+        # 设置超时时间（秒）
+        self.timeout = 300
+        
+        # 从配置文件加载测试数据（可选）
+        urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
+        if urls_file.exists():
+            with open(urls_file, 'r', encoding='utf-8') as f:
+                urls_data = yaml.safe_load(f)
+                # 从配置中获取URL
+                self.test_url = urls_data.get('your_feature', {}).get('url', 'PLACEHOLDER_URL')
+        else:
+            self.test_url = "PLACEHOLDER_URL"
+    
+    def get_command(self) -> List[str]:
+        """
+        获取执行命令
+        
+        Returns:
+            命令列表
+        """
+        return [
+            str(self.config.executable),
+            self.test_url,
+            '--output', str(self.workdir),
+            # 添加其他参数
+        ]
+    
+    def validate(self, result: TestResult) -> bool:
+        """
+        验证测试结果
+        
+        Args:
+            result: 测试结果
+            
+        Returns:
+            是否通过验证
+        """
+        validations = []
+        
+        # 示例1: 验证输出
+        output_validator = OutputValidator(
+            contains=["success", "completed"],  # 必须包含的文本
+            not_contains=["error", "failed"],   # 不能包含的文本
+            regex=r"Downloaded \d+ files"       # 正则表达式匹配（可选）
+        )
+        passed, msg = output_validator.validate(result)
+        validations.append({"validator": "output", "passed": passed, "message": msg})
+        if not passed:
+            result.validations = validations
+            return False
+        
+        # 示例2: 验证文件存在和大小
+        file_validator = FileValidator(
+            files_exist=["*.mp4", "*.mkv"],     # 必须存在的文件（支持glob）
+            files_not_exist=["*.tmp"],          # 不能存在的文件
+            min_size={"*.mp4": 1024 * 100},     # 最小文件大小（字节）
+            max_size={"*.mp4": 1024 * 1024 * 1024}  # 最大文件大小（字节）
+        )
+        passed, msg = file_validator.validate(self.workdir)
+        validations.append({"validator": "file", "passed": passed, "message": msg})
+        if not passed:
+            result.validations = validations
+            return False
+        
+        # 示例3: 验证文件内容
+        content_validator = ContentValidator(
+            file_pattern="*.txt",               # 文件模式
+            contains=["expected text"],         # 内容必须包含的文本
+            regex=r"pattern \d+"                # 内容正则匹配（可选）
+        )
+        passed, msg = content_validator.validate(self.workdir)
+        validations.append({"validator": "content", "passed": passed, "message": msg})
+        if not passed:
+            result.validations = validations
+            return False
+        
+        result.validations = validations
+        return True
+    
+    def setup(self):
+        """
+        测试前置操作（可选）
+        
+        在测试执行前调用，可用于准备测试环境
+        """
+        super().setup()
+        # 添加你的前置操作
+        # 例如：复制测试数据、创建配置文件等
+    
+    def teardown(self):
+        """
+        测试后置操作（可选）
+        
+        在测试执行后调用，可用于清理测试环境
+        """
+        super().teardown()
+        # 添加你的后置操作
+        # 例如：清理临时文件、恢复环境等

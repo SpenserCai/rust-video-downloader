@@ -1,0 +1,70 @@
+# E2E测试平台配置文件
+
+# 平台配置
+platform:
+  # 可执行程序路径（相对于平台根目录）
+  executable: "../../target/release/rvd"
+  
+  # RVD配置文件路径（可选）
+  config_file: null
+  
+  # 默认超时时间（秒）
+  default_timeout: 300
+  
+  # 默认工作目录
+  default_workdir: "./workdir"
+  
+  # 环境变量
+  env:
+    RUST_LOG: "info"
+    RUST_BACKTRACE: "1"
+
+# 测试数据配置
+test_data:
+  # URL配置文件
+  urls_file: "./datas/urls.yaml"
+  
+  # 预期结果目录
+  expected_dir: "./datas/expected"
+
+# 执行配置
+execution:
+  # 是否并行执行
+  parallel: false
+  
+  # 最大并行数
+  max_workers: 4
+  
+  # 失败时是否停止
+  stop_on_failure: false
+  
+  # 成功后清理工作目录
+  cleanup_on_success: true
+
+# 报告配置
+reporting:
+  # 启用控制台报告
+  console: true
+  
+  # 启用JSON报告
+  json: true
+  
+  # 启用HTML报告
+  html: true
+  
+  # 报告输出目录
+  output_dir: "./reports"
+  
+  # 详细输出
+  verbose: false
+
+# 日志配置
+logging:
+  # 日志级别: DEBUG, INFO, WARNING, ERROR
+  level: "INFO"
+  
+  # 日志文件路径
+  file: "./reports/test.log"
+  
+  # 日志格式
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

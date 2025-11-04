@@ -1,0 +1,65 @@
+"""单视频下载测试"""
+import yaml
+from typing import List
+
+from core.base_test import BaseTestCase, TestResult
+from validators.output import OutputValidator
+from validators.file import FileValidator
+
+
+class TestSingleVideoDownload(BaseTestCase):
+    """测试单视频下载功能
+    
+    验证RVD能够正确下载单个视频文件，包括：
+    - 命令执行成功
+    - 输出包含成功信息
+    - 生成视频文件
+    - 文件大小合理
+    """
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.tags = ['basic', 'video']
+        self.timeout = 600  # 10分钟
+        
+        # 从配置文件加载URL
+        urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
+        if urls_file.exists():
+            with open(urls_file, 'r', encoding='utf-8') as f:
+                urls_data = yaml.safe_load(f)
+                self.video_url = urls_data.get('single_video', {}).get('url', 'PLACEHOLDER_VIDEO_URL')
+        else:
+            self.video_url = "PLACEHOLDER_VIDEO_URL"
+    
+    def get_command(self) -> List[str]:
+        """获取执行命令"""
+        return [
+            str(self.config.executable),
+            self.video_url,
+            '--output', str(self.workdir),
+        ]
+    
+    def validate(self, result: TestResult) -> bool:
+        """验证结果"""
+        validations = []
+        
+        # 验证输出包含成功信息
+        output_validator = OutputValidator(
+            contains=["completed", "success"],
+        )
+        passed, msg = output_validator.validate(result)
+        validations.append({"validator": "output", "passed": passed, "message": msg})
+        if not passed:
+            result.validations = validations
+            return False
+        
+        # 验证视频文件存在且大小合理
+        file_validator = FileValidator(
+            files_exist=["*.mp4", "*.mkv", "*.flv"],
+            min_size={"*.mp4": 1024 * 100, "*.mkv": 1024 * 100, "*.flv": 1024 * 100}  # 至少100KB
+        )
+        passed, msg = file_validator.validate(self.workdir)
+        validations.append({"validator": "file", "passed": passed, "message": msg})
+        
+        result.validations = validations
+        return passed
