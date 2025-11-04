@@ -3,7 +3,7 @@
 # 平台配置
 platform:
   # 可执行程序路径（相对于平台根目录）
-  executable: "../../target/release/rvd"
+  executable: "../target/release/rvd"
   
   # RVD配置文件路径（可选，用于指定rvd的config.toml）
   config_file: "./cfg/rvd.toml"

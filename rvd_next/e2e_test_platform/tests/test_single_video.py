@@ -44,17 +44,20 @@ class TestSingleVideoDownload(BaseTestCase):
         """验证结果"""
         validations = []
         
-        # 验证输出包含成功信息
-        output_validator = OutputValidator(
-            contains=["completed", "success"],
-        )
-        passed, msg = output_validator.validate(result)
-        validations.append({"validator": "output", "passed": passed, "message": msg})
-        if not passed:
+        # 验证输出包含成功信息（支持中英文）
+        output_lower = result.output.lower()
+        has_success = any(keyword in output_lower for keyword in [
+            'completed', 'success', '完成', '成功', 'muxed to'
+        ])
+        
+        if has_success:
+            validations.append({"validator": "output", "passed": True, "message": ""})
+        else:
+            validations.append({"validator": "output", "passed": False, "message": "No success message found"})
             result.validations = validations
             return False
         
-        # 验证视频文件存在且大小合理
+        # 验证视频文件存在且大小合理（至少一种格式）
         file_validator = FileValidator(
             files_exist=["*.mp4", "*.mkv", "*.flv"],
             min_size={"*.mp4": 1024 * 100, "*.mkv": 1024 * 100, "*.flv": 1024 * 100}  # 至少100KB

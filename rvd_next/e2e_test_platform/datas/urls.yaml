@@ -10,9 +10,11 @@ single_video:
 # 批量下载测试
 batch_download:
   # 播放列表/收藏夹URL
-  playlist_url: "https://www.bilibili.com/bangumi/play/ss46085"
+  playlist_url: "https://www.bilibili.com/bangumi/play/ss47794"
   expected_count: 12 # 预期视频数量
   description: "用于测试批量下载功能"
+  quality: "480P"
+  auth_file: "./cfg/rvd.toml"
 
 # 质量选择测试
 quality_selection:

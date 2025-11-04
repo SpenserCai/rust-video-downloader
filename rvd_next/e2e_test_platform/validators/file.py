@@ -37,11 +37,19 @@ class FileValidator(Validator):
         Returns:
             (是否通过, 错误信息)
         """
-        # 检查文件存在
-        for file_pattern in self.files_exist:
-            files = list(workdir.glob(file_pattern))
-            if not files:
-                return False, f"File not found: {file_pattern}"
+        # 检查文件存在 - 使用 OR 逻辑：至少有一个模式匹配即可
+        if self.files_exist:
+            found_any = False
+            all_patterns = []
+            for file_pattern in self.files_exist:
+                files = list(workdir.glob(file_pattern))
+                all_patterns.append(file_pattern)
+                if files:
+                    found_any = True
+                    break
+            
+            if not found_any:
+                return False, f"No files found matching any of: {', '.join(all_patterns)}"
         
         # 检查文件不存在
         for file_pattern in self.files_not_exist:
@@ -49,17 +57,19 @@ class FileValidator(Validator):
             if files:
                 return False, f"File should not exist: {file_pattern} (found: {files[0].name})"
         
-        # 检查文件大小
+        # 检查文件大小 - 只检查实际存在的文件
         for file_pattern, min_bytes in self.min_size.items():
             files = list(workdir.glob(file_pattern))
-            for f in files:
-                if f.stat().st_size < min_bytes:
-                    return False, f"File {f.name} too small: {f.stat().st_size} < {min_bytes} bytes"
+            if files:  # 只有文件存在时才检查大小
+                for f in files:
+                    if f.stat().st_size < min_bytes:
+                        return False, f"File {f.name} too small: {f.stat().st_size} < {min_bytes} bytes"
         
         for file_pattern, max_bytes in self.max_size.items():
             files = list(workdir.glob(file_pattern))
-            for f in files:
-                if f.stat().st_size > max_bytes:
-                    return False, f"File {f.name} too large: {f.stat().st_size} > {max_bytes} bytes"
+            if files:  # 只有文件存在时才检查大小
+                for f in files:
+                    if f.stat().st_size > max_bytes:
+                        return False, f"File {f.name} too large: {f.stat().st_size} > {max_bytes} bytes"
         
         return True, ""

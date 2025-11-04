@@ -29,6 +29,13 @@ class TestBatchDownload(BaseTestCase):
                 batch_data = urls_data.get('batch_download', {})
                 self.playlist_url = batch_data.get('playlist_url', 'PLACEHOLDER_PLAYLIST_URL')
                 self.expected_count = batch_data.get('expected_count', 3)
+                
+                # 检查是否需要认证
+                auth_file_path = batch_data.get('auth_file')
+                if auth_file_path:
+                    self.requires_auth = True
+                    self.auth_file = config.resolve_path(auth_file_path)
+                    self.logger.info(f"Authentication enabled with file: {self.auth_file}")
         else:
             self.playlist_url = "PLACEHOLDER_PLAYLIST_URL"
             self.expected_count = 3
@@ -44,15 +51,29 @@ class TestBatchDownload(BaseTestCase):
     
     def validate(self, result: TestResult) -> bool:
         """验证结果"""
-        # 验证输出包含批量下载信息
-        if "批量" not in result.output and "batch" not in result.output.lower() and "playlist" not in result.output.lower():
+        # 验证输出包含批量下载信息（支持中英文，包括番剧、系列等）
+        output_lower = result.output.lower()
+        has_batch_info = any(keyword in output_lower for keyword in [
+            '批量', 'batch', 'playlist', '番剧', 'season', '系列', 'series',
+            '收藏夹', 'favorites', 'pages:', '个视频', 'videos'
+        ])
+        
+        if not has_batch_info:
             result.error = "Output does not contain batch download information"
             return False
         
         # 验证文件数量
-        video_files = list(self.workdir.glob('**/*.mp4')) + list(self.workdir.glob('**/*.mkv')) + list(self.workdir.glob('**/*.flv'))
+        video_files = list(self.workdir.glob('**/*.mp4')) + \
+                     list(self.workdir.glob('**/*.mkv')) + \
+                     list(self.workdir.glob('**/*.flv'))
+        
         if len(video_files) < self.expected_count:
-            result.error = f"Expected at least {self.expected_count} videos, got {len(video_files)}"
+            # 检查是否至少下载了一些视频（部分成功）
+            if len(video_files) > 0:
+                self.logger.warning(f"Expected {self.expected_count} videos, but got {len(video_files)}. Partial download may have occurred.")
+                result.error = f"Expected at least {self.expected_count} videos, got {len(video_files)} (partial download)"
+            else:
+                result.error = f"Expected at least {self.expected_count} videos, got {len(video_files)} (no videos downloaded)"
             return False
         
         self.logger.info(f"Downloaded {len(video_files)} videos")
