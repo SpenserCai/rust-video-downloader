@@ -35,11 +35,12 @@ class TestBatchDownload(BaseTestCase):
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
-        return [
-            str(self.config.executable),
+        cmd = self._build_base_command()
+        cmd.extend([
             self.playlist_url,
             '--output', str(self.workdir),
-        ]
+        ])
+        return cmd
     
     def validate(self, result: TestResult) -> bool:
         """验证结果"""

@@ -95,6 +95,13 @@ class Config:
         return None
     
     @property
+    def auth_file_path(self) -> Optional[Path]:
+        """获取认证文件路径"""
+        if auth := self.get('platform.auth_file'):
+            return self.resolve_path(auth)
+        return None
+    
+    @property
     def default_timeout(self) -> int:
         """获取默认超时时间（秒）"""
         return self.get('platform.default_timeout', 300)

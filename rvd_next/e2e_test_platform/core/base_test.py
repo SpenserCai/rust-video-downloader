@@ -27,6 +27,11 @@ class BaseTestCase(ABC):
         self.timeout = config.default_timeout
         self.workdir: Optional[Path] = None
         self.logger = logging.getLogger(self.name)
+        
+        # 认证相关配置
+        self.requires_auth = False  # 子类可以设置为True表示需要认证
+        self.auth_file: Optional[Path] = None  # 子类可以指定特定的认证文件
+        
         self._setup_workdir()
     
     def _setup_workdir(self):
@@ -36,15 +41,53 @@ class BaseTestCase(ABC):
         self.workdir.mkdir(parents=True, exist_ok=True)
         self.logger.debug(f"Work directory: {self.workdir}")
     
+    def _get_auth_file(self) -> Optional[Path]:
+        """
+        获取认证文件路径
+        
+        优先级：测试用例指定 > 全局配置 > None
+        
+        Returns:
+            认证文件路径，如果不需要认证则返回None
+        """
+        if not self.requires_auth:
+            return None
+        
+        # 优先使用测试用例指定的认证文件
+        if self.auth_file:
+            return self.auth_file
+        
+        # 其次使用全局配置的认证文件
+        return self.config.auth_file_path
+    
     @abstractmethod
     def get_command(self) -> List[str]:
         """
         获取执行命令（子类必须实现）
         
+        子类实现时应该调用 _build_base_command() 来构建包含认证的基础命令
+        
         Returns:
             命令列表
         """
         pass
+    
+    def _build_base_command(self) -> List[str]:
+        """
+        构建基础命令（包含可执行程序和认证参数）
+        
+        Returns:
+            基础命令列表
+        """
+        cmd = [str(self.config.executable)]
+        
+        # 如果需要认证，添加--config-file参数
+        auth_file = self._get_auth_file()
+        if auth_file:
+            self.logger.debug(f"Using auth file: {auth_file}")
+            cmd.extend(['--config-file', str(auth_file)])
+        
+        return cmd
     
     @abstractmethod
     def validate(self, result: TestResult) -> bool:

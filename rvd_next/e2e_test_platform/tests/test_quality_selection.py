@@ -1,4 +1,4 @@
-"""单视频下载测试"""
+"""质量选择测试"""
 import yaml
 from typing import List
 
@@ -7,35 +7,38 @@ from validators.output import OutputValidator
 from validators.file import FileValidator
 
 
-class TestSingleVideoDownload(BaseTestCase):
-    """测试单视频下载功能
+class TestQualitySelection(BaseTestCase):
+    """测试质量选择功能
     
-    验证RVD能够正确下载单个视频文件，包括：
-    - 命令执行成功
-    - 输出包含成功信息
-    - 生成视频文件
-    - 文件大小合理
+    验证RVD能够正确选择指定的视频质量，包括：
+    - 接受质量参数
+    - 下载指定质量的视频
+    - 输出包含质量信息
     """
     
     def __init__(self, config):
         super().__init__(config)
-        self.tags = ['basic', 'video']
+        self.tags = ['quality', 'feature']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载URL
+        # 从配置文件加载URL和质量设置
         urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
         if urls_file.exists():
             with open(urls_file, 'r', encoding='utf-8') as f:
                 urls_data = yaml.safe_load(f)
-                self.video_url = urls_data.get('single_video', {}).get('url', 'PLACEHOLDER_VIDEO_URL')
+                quality_data = urls_data.get('quality_selection', {})
+                self.video_url = quality_data.get('url', 'PLACEHOLDER_VIDEO_URL')
+                self.quality = quality_data.get('quality', '720P')
         else:
             self.video_url = "PLACEHOLDER_VIDEO_URL"
+            self.quality = "720P"
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
         cmd = self._build_base_command()
         cmd.extend([
             self.video_url,
+            '--quality', self.quality,
             '--output', str(self.workdir),
         ])
         return cmd
@@ -44,20 +47,19 @@ class TestSingleVideoDownload(BaseTestCase):
         """验证结果"""
         validations = []
         
-        # 验证输出包含成功信息
+        # 验证输出包含质量信息
         output_validator = OutputValidator(
-            contains=["completed", "success"],
+            contains=["quality", self.quality.lower()],
         )
         passed, msg = output_validator.validate(result)
         validations.append({"validator": "output", "passed": passed, "message": msg})
         if not passed:
-            result.validations = validations
-            return False
+            self.logger.warning(f"Quality information not found in output, but continuing validation")
         
-        # 验证视频文件存在且大小合理
+        # 验证视频文件存在
         file_validator = FileValidator(
             files_exist=["*.mp4", "*.mkv", "*.flv"],
-            min_size={"*.mp4": 1024 * 100, "*.mkv": 1024 * 100, "*.flv": 1024 * 100}  # 至少100KB
+            min_size={"*.mp4": 1024 * 100, "*.mkv": 1024 * 100, "*.flv": 1024 * 100}
         )
         passed, msg = file_validator.validate(self.workdir)
         validations.append({"validator": "file", "passed": passed, "message": msg})

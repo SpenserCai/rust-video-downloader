@@ -30,10 +30,36 @@ pip install -r requirements.txt
 ```yaml
 platform:
   executable: "../../target/release/rvd"  # RVD可执行程序路径
+  auth_file: null                         # 认证文件路径（可选）
   default_timeout: 300                    # 默认超时时间（秒）
 ```
 
-### 2. 配置测试URL
+### 2. 配置认证（可选）
+
+如果需要测试需要认证的功能（如大会员专享内容），需要配置认证文件：
+
+1. 复制 `auth.toml.example` 为 `auth.toml`（在项目根目录）
+2. 使用二维码登录获取凭证：
+   ```bash
+   ../../target/release/rvd --login-qrcode --config-file ../../rvd.toml
+   ```
+3. 或手动填入从浏览器获取的Cookie
+
+4. 在 `config.yaml` 中配置认证文件路径：
+   ```yaml
+   platform:
+     auth_file: "../../auth.toml"
+   ```
+
+5. 或在测试用例中单独指定：
+   ```python
+   def __init__(self, config):
+       super().__init__(config)
+       self.requires_auth = True
+       self.auth_file = config.resolve_path("../../auth.toml")
+   ```
+
+### 3. 配置测试URL
 
 编辑 `datas/urls.yaml` 设置测试URL（将占位符替换为实际URL）：
 
@@ -46,13 +72,14 @@ batch_download:
   expected_count: 5
 ```
 
-### 3. 环境变量（可选）
+### 4. 环境变量（可选）
 
 可以通过环境变量覆盖配置：
 
 ```bash
 export E2E_EXECUTABLE=/path/to/rvd
 export E2E_TIMEOUT=600
+export E2E_WORKDIR=/tmp/e2e_tests
 ```
 
 ## 使用
@@ -117,11 +144,12 @@ class TestMyFeature(BaseTestCase):
     
     def get_command(self) -> List[str]:
         """返回要执行的命令"""
-        return [
-            str(self.config.executable),
+        cmd = self._build_base_command()  # 构建包含认证的基础命令
+        cmd.extend([
             "my-url",
             '--output', str(self.workdir),
-        ]
+        ])
+        return cmd
     
     def validate(self, result: TestResult) -> bool:
         """验证测试结果"""
