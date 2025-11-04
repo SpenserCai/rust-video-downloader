@@ -1,5 +1,4 @@
 """弹幕下载测试"""
-import yaml
 from typing import List
 
 from core.base_test import BaseTestCase, TestResult
@@ -22,17 +21,10 @@ class TestDanmakuDownload(BaseTestCase):
         self.tags = ['danmaku', 'feature']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载URL
-        urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
-        if urls_file.exists():
-            with open(urls_file, 'r', encoding='utf-8') as f:
-                urls_data = yaml.safe_load(f)
-                danmaku_data = urls_data.get('danmaku', {})
-                self.video_url = danmaku_data.get('url', 'PLACEHOLDER_VIDEO_URL')
-                self.danmaku_format = danmaku_data.get('format', 'ass')
-        else:
-            self.video_url = "PLACEHOLDER_VIDEO_URL"
-            self.danmaku_format = "ass"
+        # 从配置文件加载测试数据（自动处理auth_file, quality等通用参数）
+        test_data = self._load_test_data('danmaku')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_VIDEO_URL')
+        self.danmaku_format = test_data.get('format', 'ass')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""

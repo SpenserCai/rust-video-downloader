@@ -32,6 +32,10 @@ class BaseTestCase(ABC):
         self.requires_auth = False  # 子类可以设置为True表示需要认证
         self.auth_file: Optional[Path] = None  # 子类可以指定特定的认证文件
         
+        # 通用测试参数（从urls.yaml加载）
+        self.quality: Optional[str] = None  # 视频质量
+        self.test_data: Dict[str, Any] = {}  # 存储从urls.yaml加载的测试数据
+        
         self._setup_workdir()
     
     def _setup_workdir(self):
@@ -72,9 +76,54 @@ class BaseTestCase(ABC):
         """
         pass
     
+    def _load_test_data(self, data_key: str) -> Dict[str, Any]:
+        """
+        从urls.yaml加载测试数据，并自动处理通用参数
+        
+        Args:
+            data_key: urls.yaml中的数据键（如 'single_video', 'batch_download'）
+            
+        Returns:
+            测试数据字典
+        """
+        urls_file = self.config.resolve_path(self.config.get('test_data.urls_file', './datas/urls.yaml'))
+        if not urls_file.exists():
+            self.logger.warning(f"URLs file not found: {urls_file}")
+            return {}
+        
+        try:
+            import yaml
+            with open(urls_file, 'r', encoding='utf-8') as f:
+                urls_data = yaml.safe_load(f)
+                test_data = urls_data.get(data_key, {})
+                
+                # 自动处理通用参数
+                # 1. 认证文件
+                if 'auth_file' in test_data:
+                    auth_file_path = test_data['auth_file']
+                    if auth_file_path:
+                        self.requires_auth = True
+                        self.auth_file = self.config.resolve_path(auth_file_path)
+                        self.logger.info(f"Authentication enabled with file: {self.auth_file}")
+                
+                # 2. 质量设置
+                if 'quality' in test_data:
+                    self.quality = test_data['quality']
+                    self.logger.debug(f"Quality set to: {self.quality}")
+                
+                # 3. 超时设置
+                if 'timeout' in test_data:
+                    self.timeout = test_data['timeout']
+                    self.logger.debug(f"Timeout set to: {self.timeout}s")
+                
+                return test_data
+        except Exception as e:
+            self.logger.error(f"Failed to load test data from {urls_file}: {e}")
+            return {}
+    
     def _build_base_command(self) -> List[str]:
         """
-        构建基础命令（包含可执行程序和认证参数）
+        构建基础命令（包含可执行程序、认证参数和通用参数）
         
         Returns:
             基础命令列表
@@ -86,6 +135,10 @@ class BaseTestCase(ABC):
         if auth_file:
             self.logger.debug(f"Using auth file: {auth_file}")
             cmd.extend(['--config-file', str(auth_file)])
+        
+        # 如果设置了质量，添加--quality参数
+        if self.quality:
+            cmd.extend(['--quality', self.quality])
         
         return cmd
     

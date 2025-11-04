@@ -1,5 +1,4 @@
 """质量选择测试"""
-import yaml
 from typing import List
 
 from core.base_test import BaseTestCase, TestResult
@@ -21,24 +20,19 @@ class TestQualitySelection(BaseTestCase):
         self.tags = ['quality', 'feature']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载URL和质量设置
-        urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
-        if urls_file.exists():
-            with open(urls_file, 'r', encoding='utf-8') as f:
-                urls_data = yaml.safe_load(f)
-                quality_data = urls_data.get('quality_selection', {})
-                self.video_url = quality_data.get('url', 'PLACEHOLDER_VIDEO_URL')
-                self.quality = quality_data.get('quality', '720P')
-        else:
-            self.video_url = "PLACEHOLDER_VIDEO_URL"
-            self.quality = "720P"
+        # 从配置文件加载测试数据（自动处理auth_file, quality等通用参数）
+        test_data = self._load_test_data('quality_selection')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_VIDEO_URL')
+        # quality已经在_load_test_data中自动设置
+        if not self.quality:
+            self.quality = '720P'
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
+        # _build_base_command 已经包含了 --quality 参数
         cmd = self._build_base_command()
         cmd.extend([
             self.video_url,
-            '--quality', self.quality,
             '--output', str(self.workdir),
         ])
         return cmd

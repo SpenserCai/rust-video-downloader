@@ -1,5 +1,4 @@
 """批量下载测试"""
-import yaml
 from typing import List
 
 from core.base_test import BaseTestCase, TestResult
@@ -21,24 +20,10 @@ class TestBatchDownload(BaseTestCase):
         self.tags = ['batch', 'video']
         self.timeout = 1800  # 30分钟
         
-        # 从配置文件加载URL
-        urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
-        if urls_file.exists():
-            with open(urls_file, 'r', encoding='utf-8') as f:
-                urls_data = yaml.safe_load(f)
-                batch_data = urls_data.get('batch_download', {})
-                self.playlist_url = batch_data.get('playlist_url', 'PLACEHOLDER_PLAYLIST_URL')
-                self.expected_count = batch_data.get('expected_count', 3)
-                
-                # 检查是否需要认证
-                auth_file_path = batch_data.get('auth_file')
-                if auth_file_path:
-                    self.requires_auth = True
-                    self.auth_file = config.resolve_path(auth_file_path)
-                    self.logger.info(f"Authentication enabled with file: {self.auth_file}")
-        else:
-            self.playlist_url = "PLACEHOLDER_PLAYLIST_URL"
-            self.expected_count = 3
+        # 从配置文件加载测试数据（自动处理auth_file, quality等通用参数）
+        test_data = self._load_test_data('batch_download')
+        self.playlist_url = test_data.get('playlist_url', 'PLACEHOLDER_PLAYLIST_URL')
+        self.expected_count = test_data.get('expected_count', 3)
     
     def get_command(self) -> List[str]:
         """获取执行命令"""

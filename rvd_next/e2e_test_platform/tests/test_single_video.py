@@ -1,5 +1,4 @@
 """单视频下载测试"""
-import yaml
 from typing import List
 
 from core.base_test import BaseTestCase, TestResult
@@ -22,14 +21,9 @@ class TestSingleVideoDownload(BaseTestCase):
         self.tags = ['basic', 'video']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载URL
-        urls_file = config.resolve_path(config.get('test_data.urls_file', './datas/urls.yaml'))
-        if urls_file.exists():
-            with open(urls_file, 'r', encoding='utf-8') as f:
-                urls_data = yaml.safe_load(f)
-                self.video_url = urls_data.get('single_video', {}).get('url', 'PLACEHOLDER_VIDEO_URL')
-        else:
-            self.video_url = "PLACEHOLDER_VIDEO_URL"
+        # 从配置文件加载测试数据（自动处理auth_file, quality等通用参数）
+        test_data = self._load_test_data('single_video')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_VIDEO_URL')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
