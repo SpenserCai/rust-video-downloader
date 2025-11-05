@@ -9,6 +9,7 @@
 
 pub mod api;
 pub mod auth;
+pub mod cdn;
 pub mod client;
 pub mod parser;
 mod platform;

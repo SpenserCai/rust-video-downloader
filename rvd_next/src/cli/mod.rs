@@ -119,6 +119,10 @@ pub struct Cli {
     /// Maximum number of videos to download in batch mode (safety limit)
     #[arg(long)]
     pub batch_limit: Option<usize>,
+
+    /// Custom User-Agent string (default: random)
+    #[arg(long)]
+    pub user_agent: Option<String>,
 }
 
 impl Cli {

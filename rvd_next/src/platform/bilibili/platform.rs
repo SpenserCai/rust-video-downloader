@@ -15,6 +15,7 @@ pub struct BilibiliPlatform {
     client: Arc<HttpClient>,
     api_mode: super::ApiMode,
     wbi_manager: tokio::sync::Mutex<super::wbi::WbiManager>,
+    cdn_optimizer: super::cdn::BilibiliCdnOptimizer,
     metadata: PlatformMetadata,
 }
 
@@ -45,6 +46,7 @@ impl BilibiliPlatform {
             client,
             api_mode,
             wbi_manager: tokio::sync::Mutex::new(wbi_manager),
+            cdn_optimizer: super::cdn::BilibiliCdnOptimizer::new(),
             metadata,
         })
     }
@@ -52,6 +54,12 @@ impl BilibiliPlatform {
     /// Create a new BilibiliPlatform with a specific API mode
     pub fn with_api_mode(mut self, api_mode: super::ApiMode) -> Self {
         self.api_mode = api_mode;
+        self
+    }
+
+    /// Configure CDN optimizer with custom backup hosts
+    pub fn with_cdn_config(mut self, backup_hosts: Vec<String>) -> Self {
+        self.cdn_optimizer = super::cdn::BilibiliCdnOptimizer::with_backup_hosts(backup_hosts);
         self
     }
 }
@@ -143,7 +151,21 @@ impl Platform for BilibiliPlatform {
             .ok_or_else(|| DownloaderError::Parse("Missing cid in StreamContext".to_string()))?;
         let ep_id = context.get_str("ep_id");
 
-        super::client::get_play_url(&self.client, video_id, cid, ep_id, auth, self.api_mode).await
+        let mut streams =
+            super::client::get_play_url(&self.client, video_id, cid, ep_id, auth, self.api_mode)
+                .await?;
+
+        // Check for CMCC CDN and mark streams that need single-threaded download
+        for stream in &mut streams {
+            if self.cdn_optimizer.is_cmcc_cdn(&stream.url) {
+                tracing::debug!("Bilibili: Detected CMCC CDN, marking for single-threaded download");
+                stream.extra_data = Some(serde_json::json!({
+                    "disable_multithread": true
+                }));
+            }
+        }
+
+        Ok(streams)
     }
 
     async fn get_subtitles(&self, context: &StreamContext) -> Result<Vec<Subtitle>> {
@@ -199,6 +221,11 @@ impl Platform for BilibiliPlatform {
                 Ok(None)
             }
         }
+    }
+
+    fn optimize_download_url(&self, url: &str) -> String {
+        // Use CDN optimizer to replace PCDN and foreign sources
+        self.cdn_optimizer.optimize_url(url)
     }
 
     fn customize_download_headers(&self, url: &str) -> Option<reqwest::header::HeaderMap> {

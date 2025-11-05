@@ -59,15 +59,56 @@ impl Orchestrator {
     ///
     /// A new orchestrator instance
     pub fn new(config: Config, cli: &Cli) -> Result<Self> {
-        let http_client = Arc::new(HttpClient::new()?);
+        // Create HTTP client with custom User-Agent if specified
+        // Priority: CLI > Config > Random (default)
+        let http_client = if let Some(ref ua) = cli.user_agent {
+            Arc::new(HttpClient::with_custom_user_agent(ua.clone())?)
+        } else if let Some(ref http_config) = config.http {
+            if let Some(ref ua) = http_config.user_agent {
+                if !ua.is_empty() {
+                    Arc::new(HttpClient::with_custom_user_agent(ua.clone())?)
+                } else {
+                    Arc::new(HttpClient::new()?)
+                }
+            } else {
+                Arc::new(HttpClient::new()?)
+            }
+        } else {
+            Arc::new(HttpClient::new()?)
+        };
+
+        // Log User-Agent if requested in config
+        if let Some(ref http_config) = config.http {
+            if http_config.log_user_agent {
+                tracing::info!("Using User-Agent: {}", http_client.user_agent());
+            }
+        }
 
         // Create platform registry
         let mut registry = PlatformRegistry::new();
 
         // Register Bilibili platform
         let api_mode = cli.get_api_mode();
-        let bilibili = Arc::new(crate::platform::bilibili::BilibiliPlatform::new(api_mode)?);
-        registry.register(bilibili);
+        let mut bilibili = crate::platform::bilibili::BilibiliPlatform::new(api_mode)?;
+
+        // Configure CDN optimizer if specified in config
+        if let Some(ref platforms) = config.platforms {
+            if let Some(ref bilibili_config) = platforms.bilibili {
+                if let Some(ref cdn_config) = bilibili_config.cdn {
+                    if let Some(ref backup_hosts) = cdn_config.backup_hosts {
+                        if !backup_hosts.is_empty() {
+                            tracing::debug!(
+                                "Configuring Bilibili CDN with backup hosts: {:?}",
+                                backup_hosts
+                            );
+                            bilibili = bilibili.with_cdn_config(backup_hosts.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        registry.register(Arc::new(bilibili));
 
         // Future: Register more platforms here
         // let youtube = Arc::new(crate::platform::youtube::YouTubePlatform::new()?);
@@ -600,16 +641,39 @@ impl Orchestrator {
             self.downloader.clone()
         };
 
+        // Optimize download URLs (platform-specific CDN optimization)
+        let optimized_video_url = platform.optimize_download_url(&video_stream.url);
+        let optimized_audio_url = platform.optimize_download_url(&audio_stream.url);
+
+        // Check if streams require special download mode (e.g., CMCC CDN single-threaded)
+        let video_disable_multithread = video_stream
+            .extra_data
+            .as_ref()
+            .and_then(|d| d.get("disable_multithread"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let audio_disable_multithread = audio_stream
+            .extra_data
+            .as_ref()
+            .and_then(|d| d.get("disable_multithread"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        if video_disable_multithread || audio_disable_multithread {
+            tracing::info!("Platform requested single-threaded download mode");
+        }
+
         // Get platform-specific download headers
-        let video_headers = platform.customize_download_headers(&video_stream.url);
-        let audio_headers = platform.customize_download_headers(&audio_stream.url);
+        let video_headers = platform.customize_download_headers(&optimized_video_url);
+        let audio_headers = platform.customize_download_headers(&optimized_audio_url);
 
         // Download video
         let video_path = temp_dir.join("video.m4s");
         let video_pb = self.progress.create_bar("Video", 0);
         downloader_with_auth
             .download(
-                &video_stream.url,
+                &optimized_video_url,
                 &video_path,
                 video_headers,
                 Some(video_pb.clone()),
@@ -622,7 +686,7 @@ impl Orchestrator {
         let audio_pb = self.progress.create_bar("Audio", 0);
         downloader_with_auth
             .download(
-                &audio_stream.url,
+                &optimized_audio_url,
                 &audio_path,
                 audio_headers,
                 Some(audio_pb.clone()),

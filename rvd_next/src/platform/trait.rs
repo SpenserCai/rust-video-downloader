@@ -405,6 +405,44 @@ pub trait Platform: Send + Sync {
         Ok(None)
     }
 
+    /// Optimize download URL
+    ///
+    /// Allows platforms to optimize or modify download URLs before downloading.
+    /// This is useful for:
+    /// - Replacing unstable CDN nodes (e.g., PCDN detection in Bilibili)
+    /// - Selecting better CDN servers
+    /// - Adding authentication parameters
+    /// - Working around platform-specific issues
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The original download URL
+    ///
+    /// # Returns
+    ///
+    /// The optimized URL. Returns the original URL if no optimization is needed.
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns the original URL unchanged.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // In your platform implementation:
+    /// fn optimize_download_url(&self, url: &str) -> String {
+    ///     // Replace unstable CDN with backup
+    ///     if url.contains(":8080") {
+    ///         url.replace(":8080", "")
+    ///     } else {
+    ///         url.to_string()
+    ///     }
+    /// }
+    /// ```
+    fn optimize_download_url(&self, url: &str) -> String {
+        url.to_string()
+    }
+
     /// Customize download request headers
     ///
     /// Allows platforms to customize HTTP request headers for specific URLs.

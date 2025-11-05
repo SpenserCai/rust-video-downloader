@@ -49,6 +49,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Regex
 regex = "1.10"
 
+# Random number generation
+rand = "0.8"
+
 # Compression (for manual gzip decompression if needed)
 flate2 = "1.0"
 

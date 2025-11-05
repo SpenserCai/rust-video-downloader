@@ -1,0 +1,73 @@
+# RVD Configuration Example
+# Copy this file to rvd.toml or ~/.config/rvd/config.toml
+
+# Default quality priority (comma-separated)
+# default_quality = ["1080P", "720P", "480P"]
+
+# Default codec priority (comma-separated)
+# default_codec = ["avc", "hevc", "av1"]
+
+# Number of download threads
+# thread_count = 4
+
+# Output file template for single videos
+# output_template = "<title>"
+
+# Output file template for multi-page videos
+# multi_output_template = "<title>/<pageNumberWithZero>-<pageTitle>"
+
+# HTTP Configuration
+[http]
+# Custom User-Agent string (empty or omit for random)
+# user_agent = ""
+
+# Whether to log the User-Agent being used
+# log_user_agent = false
+
+# Authentication Configuration
+[auth]
+# Cookie string for authentication
+# cookie = "your_cookie_here"
+
+# Access token for authentication
+# access_token = "your_token_here"
+
+# Refresh token (for TV API)
+# refresh_token = "your_refresh_token_here"
+
+# Token expiration timestamp
+# expires_at = 1234567890
+
+# User ID
+# mid = 123456
+
+# Paths Configuration
+[paths]
+# Path to ffmpeg binary
+# ffmpeg = "/usr/local/bin/ffmpeg"
+
+# Aria2c Configuration
+[aria2c]
+# Enable aria2c for downloading
+# enabled = false
+
+# Path to aria2c binary
+# path = "aria2c"
+
+# Custom aria2c arguments
+# args = "-x8 -s8"
+
+# Platform-Specific Configuration
+[platforms.bilibili]
+# Bilibili CDN Configuration
+[platforms.bilibili.cdn]
+# Enable PCDN (P2P CDN) replacement (default: true)
+# When enabled, URLs with port numbers (e.g., :8080) will be replaced with backup CDN
+enable_pcdn_replacement = true
+
+# List of backup CDN hosts to use when replacing PCDN or foreign sources
+# Default: ["upos-sz-mirrorcoso1.bilivideo.com", "upos-sz-mirrorcos.bilivideo.com"]
+# backup_hosts = ["upos-sz-mirrorcoso1.bilivideo.com"]
+
+# Replace foreign sources like akamaized.net (default: true)
+replace_foreign_sources = true

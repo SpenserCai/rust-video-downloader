@@ -2,6 +2,10 @@ use crate::error::{DownloaderError, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Deserialize, Default)]
 #[allow(dead_code)] // Some fields are reserved for future use
 pub struct Config {
@@ -21,6 +25,10 @@ pub struct Config {
     pub paths: Option<PathsConfig>,
     #[serde(default)]
     pub aria2c: Option<Aria2cConfig>,
+    #[serde(default)]
+    pub http: Option<HttpConfig>,
+    #[serde(default)]
+    pub platforms: Option<PlatformConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, serde::Serialize)]
@@ -50,6 +58,41 @@ pub struct Aria2cConfig {
     pub path: Option<String>,
     #[serde(default)]
     pub args: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct HttpConfig {
+    /// Custom User-Agent string (empty or None means random)
+    #[serde(default)]
+    pub user_agent: Option<String>,
+    /// Whether to log the User-Agent being used
+    #[serde(default)]
+    pub log_user_agent: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PlatformConfig {
+    #[serde(default)]
+    pub bilibili: Option<BilibiliConfig>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BilibiliConfig {
+    #[serde(default)]
+    pub cdn: Option<BilibiliCdnConfig>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BilibiliCdnConfig {
+    /// Enable PCDN replacement (default: true)
+    #[serde(default = "default_true")]
+    pub enable_pcdn_replacement: bool,
+    /// List of backup CDN hosts
+    #[serde(default)]
+    pub backup_hosts: Option<Vec<String>>,
+    /// Replace foreign sources like akamaized.net (default: true)
+    #[serde(default = "default_true")]
+    pub replace_foreign_sources: bool,
 }
 
 impl Config {
