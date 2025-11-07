@@ -108,6 +108,7 @@ bilibili:
     user_space:
       url: "https://space.bilibili.com/102647921"
       description: "UP 主空间批量下载（请填入实际 UP 主空间 URL）"
+      quality: "480P"
       batch_limit: 5
     media_list:
       url: "PLACEHOLDER_MEDIA_LIST_URL"
