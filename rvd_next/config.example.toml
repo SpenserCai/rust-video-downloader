@@ -61,13 +61,18 @@
 [platforms.bilibili]
 # Bilibili CDN Configuration
 [platforms.bilibili.cdn]
+# Force replace all bilivideo.com hosts with backup CDN (default: true)
+# This prevents HTTP redirects to unstable PCDN nodes, which is the main anti-restriction mechanism.
+# Equivalent to BBDown's --force-replace-host option (enabled by default).
+# force_replace_host = true
+
 # Enable PCDN (P2P CDN) replacement (default: true)
 # When enabled, URLs with port numbers (e.g., :8080) will be replaced with backup CDN
-enable_pcdn_replacement = true
+# enable_pcdn_replacement = true
 
 # List of backup CDN hosts to use when replacing PCDN or foreign sources
 # Default: ["upos-sz-mirrorcoso1.bilivideo.com", "upos-sz-mirrorcos.bilivideo.com"]
 # backup_hosts = ["upos-sz-mirrorcoso1.bilivideo.com"]
 
 # Replace foreign sources like akamaized.net (default: true)
-replace_foreign_sources = true
+# replace_foreign_sources = true
