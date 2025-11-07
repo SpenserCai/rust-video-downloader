@@ -114,15 +114,18 @@ impl BilibiliCdnOptimizer {
     /// Optimize a download URL
     ///
     /// Performs the following optimizations in order:
+    /// 0. Detects .mcdn.bilivideo.cn domains and returns them unchanged (keeps HTTPS, host, and port)
     /// 1. Detects and replaces PCDN URLs (URLs with port numbers)
     /// 2. Detects and replaces foreign source URLs (akamaized.net)
     /// 3. Force replaces all bilivideo.com hosts with backup CDN (if enabled)
-    /// 4. Force replaces HTTPS with HTTP (if enabled, except for .mcdn.bilivideo.cn)
+    /// 4. Force replaces HTTPS with HTTP (if enabled)
     ///
+    /// The .mcdn.bilivideo.cn check (step 0) has highest priority because these domains
+    /// MUST NOT be modified at all - they require specific ports and HTTPS to work properly.
+    /// This matches BBDown's behavior: `if (url.Contains(".mcdn.bilivideo.cn:")) return url;`
     /// The force replacement (step 3) is enabled by default to prevent HTTP redirects
     /// to unstable PCDN nodes. The force HTTP (step 4) is enabled by default to bypass
-    /// stricter SSL/TLS validation on some CDN nodes, which is a common anti-restriction
-    /// mechanism used by downloaders like BBDown.
+    /// stricter SSL/TLS validation on some CDN nodes.
     ///
     /// # Arguments
     ///
@@ -136,6 +139,12 @@ impl BilibiliCdnOptimizer {
     ///
     /// ```ignore
     /// let optimizer = BilibiliCdnOptimizer::new();
+    ///
+    /// // .mcdn.bilivideo.cn URL with port (audio streams) - MUST remain unchanged
+    /// let mcdn_url = "https://xy60x188x71x73xy.mcdn.bilivideo.cn:8082/v1/resource/audio.m4s";
+    /// let optimized = optimizer.optimize_url(mcdn_url);
+    /// // Returns: "https://xy60x188x71x73xy.mcdn.bilivideo.cn:8082/v1/resource/audio.m4s"
+    /// // (completely unchanged - port is REQUIRED)
     ///
     /// // PCDN URL with port number
     /// let pcdn_url = "https://upos-sz-mirrorali.bilivideo.com:8080/video.m4s";
@@ -154,6 +163,18 @@ impl BilibiliCdnOptimizer {
     /// ```
     pub fn optimize_url(&self, url: &str) -> String {
         let mut optimized = url.to_string();
+
+        // Step 0: Check for .mcdn.bilivideo.cn domains first (highest priority)
+        // These domains MUST NOT be modified at all - keep original URL intact including port numbers
+        // This matches BBDown's behavior: if (url.Contains(".mcdn.bilivideo.cn:")) return url;
+        // The port number (e.g., :8082) is REQUIRED for MCDN servers to work properly
+        if self.mcdn_regex.is_match(&optimized) {
+            tracing::debug!(
+                "Bilibili: Detected .mcdn.bilivideo.cn domain, keeping URL unchanged (including port number)"
+            );
+            // Return immediately without ANY modification
+            return optimized;
+        }
 
         // Step 1: Check for PCDN (URLs with port numbers like :8080)
         if self.pcdn_regex.is_match(&optimized) {
@@ -191,16 +212,9 @@ impl BilibiliCdnOptimizer {
 
         // Step 4: Force use HTTP instead of HTTPS
         // This bypasses stricter SSL/TLS validation on some CDN nodes
-        // Exception: .mcdn.bilivideo.cn domains should not be converted
         if self.force_http && optimized.starts_with("https:") {
-            if !self.mcdn_regex.is_match(&optimized) {
-                tracing::debug!("Bilibili: Converting HTTPS to HTTP to bypass SSL validation");
-                optimized = optimized.replace("https:", "http:");
-            } else {
-                tracing::debug!(
-                    "Bilibili: Skipping HTTPS to HTTP conversion for .mcdn.bilivideo.cn domain"
-                );
-            }
+            tracing::debug!("Bilibili: Converting HTTPS to HTTP to bypass SSL validation");
+            optimized = optimized.replace("https:", "http:");
         }
 
         optimized
@@ -349,11 +363,12 @@ mod tests {
     fn test_mcdn_exception() {
         let optimizer = BilibiliCdnOptimizer::new();
 
-        // Test .mcdn.bilivideo.cn domain without port (should not be converted to HTTP)
+        // Test .mcdn.bilivideo.cn domain without port (should remain completely unchanged)
         let mcdn_url = "https://example.mcdn.bilivideo.cn/video.m4s";
         let optimized = optimizer.optimize_url(mcdn_url);
 
-        // Should remain HTTPS (mcdn exception)
+        // Should remain completely unchanged (mcdn exception)
+        assert_eq!(optimized, mcdn_url);
         assert!(optimized.starts_with("https:"));
         assert!(optimized.contains(".mcdn.bilivideo.cn"));
     }
@@ -362,15 +377,35 @@ mod tests {
     fn test_mcdn_with_port() {
         let optimizer = BilibiliCdnOptimizer::new();
 
-        // Test .mcdn.bilivideo.cn domain with port
-        // Port will trigger PCDN replacement, but should still not convert to HTTP
-        let mcdn_url = "https://example.mcdn.bilivideo.cn:8080/video.m4s";
+        // Test .mcdn.bilivideo.cn domain with port (typical audio stream URL)
+        // This is the key fix: mcdn domains MUST keep port numbers intact
+        // Port numbers are REQUIRED for MCDN servers to work properly
+        let mcdn_url = "https://xy60x188x71x73xy.mcdn.bilivideo.cn:8082/v1/resource/audio.m4s";
         let optimized = optimizer.optimize_url(mcdn_url);
 
-        // PCDN detection will replace the host, so it won't be mcdn anymore
-        // This is expected behavior - PCDN takes precedence
-        assert!(!optimized.contains(":8080"));
-        assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
+        // URL should remain completely unchanged - port number is REQUIRED
+        assert_eq!(optimized, mcdn_url);
+        assert!(optimized.contains(":8082"));
+        assert!(optimized.starts_with("https:"));
+        assert!(optimized.contains("xy60x188x71x73xy.mcdn.bilivideo.cn"));
+        assert!(optimized.contains("/v1/resource/audio.m4s"));
+    }
+
+    #[test]
+    fn test_mcdn_priority_over_pcdn() {
+        let optimizer = BilibiliCdnOptimizer::new();
+
+        // Test that mcdn check has priority over PCDN detection
+        // Even though URL has port number, mcdn domains should remain completely unchanged
+        let mcdn_url = "https://test.mcdn.bilivideo.cn:8080/video.m4s";
+        let optimized = optimizer.optimize_url(mcdn_url);
+
+        // Should remain completely unchanged - mcdn has highest priority
+        assert_eq!(optimized, mcdn_url);
+        assert!(optimized.contains(":8080"));
+        assert!(optimized.starts_with("https:"));
+        assert!(optimized.contains("test.mcdn.bilivideo.cn"));
+        assert!(!optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
     }
 
     #[test]

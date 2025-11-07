@@ -230,8 +230,8 @@ impl Platform for BilibiliPlatform {
     }
 
     fn customize_download_headers(&self, url: &str) -> Option<reqwest::header::HeaderMap> {
-        // Only add custom headers for bilivideo.com URLs (Bilibili CDN)
-        if url.contains("bilivideo.com") {
+        // Add custom headers for bilivideo.com and bilivideo.cn URLs (Bilibili CDN)
+        if url.contains("bilivideo.com") || url.contains("bilivideo.cn") {
             let mut headers = reqwest::header::HeaderMap::new();
 
             // Bilibili CDN requires Referer header
