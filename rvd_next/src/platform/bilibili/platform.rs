@@ -245,6 +245,9 @@ impl Platform for BilibiliPlatform {
             {
                 headers.insert("User-Agent", value);
             }
+            
+            // Note: Cookie will be added by Downloader from auth info
+            // We don't add it here to avoid duplication
 
             Some(headers)
         } else {

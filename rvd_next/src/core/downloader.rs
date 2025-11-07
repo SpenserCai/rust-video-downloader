@@ -131,7 +131,14 @@ impl Downloader {
         output: &Path,
         custom_headers: Option<reqwest::header::HeaderMap>,
     ) -> Result<()> {
-        let headers = custom_headers.unwrap_or_default();
+        let mut headers = custom_headers.unwrap_or_default();
+        
+        // Add auth headers if available
+        if let Some(ref auth) = self.auth {
+            self.client.add_auth(&mut headers, auth);
+            tracing::debug!("Added auth headers to download request");
+        }
+        
         let response = self.client.get(url, Some(headers)).await?;
         let bytes = response.bytes().await?;
         tokio::fs::write(output, bytes).await?;
@@ -145,7 +152,14 @@ impl Downloader {
         custom_headers: Option<reqwest::header::HeaderMap>,
         progress: Option<Arc<ProgressBar>>,
     ) -> Result<()> {
-        let headers = custom_headers.unwrap_or_default();
+        let mut headers = custom_headers.unwrap_or_default();
+        
+        // Add auth headers if available
+        if let Some(ref auth) = self.auth {
+            self.client.add_auth(&mut headers, auth);
+            tracing::debug!("Added auth headers to download request");
+        }
+        
         let response = self.client.get(url, Some(headers)).await?;
         let mut file = File::create(output).await?;
         let mut stream = response.bytes_stream();
@@ -178,6 +192,15 @@ impl Downloader {
                 request = request.header(key, value);
             }
         }
+        
+        // Add auth headers if available
+        if let Some(ref auth) = self.auth {
+            if let Some(ref cookie) = auth.cookie {
+                if let Ok(value) = cookie.parse::<reqwest::header::HeaderValue>() {
+                    request = request.header("Cookie", value);
+                }
+            }
+        }
 
         let response = request.send().await?;
 
@@ -206,6 +229,15 @@ impl Downloader {
         if let Some(headers) = custom_headers {
             for (key, value) in headers.iter() {
                 request = request.header(key, value);
+            }
+        }
+        
+        // Add auth headers if available
+        if let Some(ref auth) = self.auth {
+            if let Some(ref cookie) = auth.cookie {
+                if let Ok(value) = cookie.parse::<reqwest::header::HeaderValue>() {
+                    request = request.header("Cookie", value);
+                }
             }
         }
 
