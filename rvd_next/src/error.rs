@@ -209,7 +209,7 @@ impl DownloaderError {
             Self::AgeRestricted { .. } => Some("使用已登录的账号或提供年龄验证信息".to_string()),
             Self::LiveNotStarted { .. } => Some("等待直播开始后再尝试".to_string()),
             Self::BatchLimitExceeded { .. } => {
-                Some("使用 --max-videos 参数限制下载数量".to_string())
+                Some("使用 --max-videos 参数限制下载数量，或增加 --batch-limit 的值".to_string())
             }
             _ => None,
         }

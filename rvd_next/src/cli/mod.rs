@@ -116,9 +116,13 @@ pub struct Cli {
     #[arg(long)]
     pub use_mp4box: bool,
 
-    /// Maximum number of videos to download in batch mode (safety limit)
+    /// Maximum number of videos to download in batch mode (safety limit, will error if exceeded)
     #[arg(long)]
     pub batch_limit: Option<usize>,
+
+    /// Maximum number of videos to download (will truncate to first N videos)
+    #[arg(long)]
+    pub max_videos: Option<usize>,
 
     /// Custom User-Agent string (default: random)
     #[arg(long)]

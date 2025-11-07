@@ -318,13 +318,21 @@ impl Orchestrator {
 
         println!("\n✓ 共找到 {} 个视频", all_videos.len());
 
-        // Check batch limit
+        // Check batch limit (safety limit - will error if exceeded)
         if let Some(limit) = cli.batch_limit {
             if all_videos.len() > limit {
                 return Err(DownloaderError::BatchLimitExceeded {
                     requested: all_videos.len(),
                     max: limit,
                 });
+            }
+        }
+
+        // Apply max_videos limit (will truncate to first N videos)
+        if let Some(max) = cli.max_videos {
+            if all_videos.len() > max {
+                println!("⚠️  限制下载数量: 找到 {} 个视频，将只下载前 {} 个", all_videos.len(), max);
+                all_videos.truncate(max);
             }
         }
 

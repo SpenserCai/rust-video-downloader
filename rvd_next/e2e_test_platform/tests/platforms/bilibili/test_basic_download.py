@@ -290,7 +290,7 @@ class TestBangumiSSDownload(BaseTestCase):
         cmd = self._build_base_command()
         cmd.extend([
             self.video_url,
-            '--batch-limit', '3',  # 限制下载数量以加快测试
+            '--max-videos', '3',  # 限制下载数量以加快测试
             '--output', str(self.workdir),
         ])
         return cmd

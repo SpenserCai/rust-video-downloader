@@ -24,14 +24,14 @@ class TestFavoritesBatchDownload(BaseTestCase):
         test_data = self._load_test_data('bilibili')
         batch_data = test_data.get('batch_download', {}).get('favorites', {})
         self.video_url = batch_data.get('url', 'PLACEHOLDER_FAVORITES_URL')
-        self.batch_limit = batch_data.get('batch_limit', 5)
+        self.max_videos = batch_data.get('batch_limit', 5)  # 使用 max_videos 限制下载数量
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
         cmd = self._build_base_command()
         cmd.extend([
             self.video_url,
-            '--batch-limit', str(self.batch_limit),
+            '--max-videos', str(self.max_videos),
             '--output', str(self.workdir),
         ])
         return cmd
@@ -94,14 +94,14 @@ class TestUserSpaceBatchDownload(BaseTestCase):
         test_data = self._load_test_data('bilibili')
         batch_data = test_data.get('batch_download', {}).get('user_space', {})
         self.video_url = batch_data.get('url', 'PLACEHOLDER_USER_SPACE_URL')
-        self.batch_limit = batch_data.get('batch_limit', 5)
+        self.max_videos = batch_data.get('batch_limit', 5)  # 使用 max_videos 限制下载数量
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
         cmd = self._build_base_command()
         cmd.extend([
             self.video_url,
-            '--batch-limit', str(self.batch_limit),
+            '--max-videos', str(self.max_videos),
             '--output', str(self.workdir),
         ])
         return cmd
