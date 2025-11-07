@@ -80,8 +80,12 @@ class BaseTestCase(ABC):
         """
         从urls.yaml加载测试数据，并自动处理通用参数
         
+        支持嵌套路径访问，例如：
+        - 'quality_selection' -> urls.yaml 的顶层 key
+        - 'bilibili.basic_download.bv_video' -> 嵌套访问
+        
         Args:
-            data_key: urls.yaml中的数据键（如 'single_video', 'batch_download'）
+            data_key: urls.yaml中的数据键，支持点号分隔的路径
             
         Returns:
             测试数据字典
@@ -95,7 +99,18 @@ class BaseTestCase(ABC):
             import yaml
             with open(urls_file, 'r', encoding='utf-8') as f:
                 urls_data = yaml.safe_load(f)
-                test_data = urls_data.get(data_key, {})
+                
+                # 支持嵌套路径访问（用点号分隔）
+                if '.' in data_key:
+                    keys = data_key.split('.')
+                    test_data = urls_data
+                    for key in keys:
+                        test_data = test_data.get(key, {})
+                        if not isinstance(test_data, dict):
+                            self.logger.warning(f"Invalid path in data_key: {data_key}")
+                            return {}
+                else:
+                    test_data = urls_data.get(data_key, {})
                 
                 # 自动处理通用参数
                 # 1. 认证文件
@@ -117,7 +132,12 @@ class BaseTestCase(ABC):
                     self.quality = test_data['quality']
                     self.logger.debug(f"Quality set to: {self.quality}")
                 
-                # 3. 超时设置
+                # 3. 编码设置
+                if 'codec' in test_data:
+                    self.codec = test_data['codec']
+                    self.logger.debug(f"Codec set to: {self.codec}")
+                
+                # 4. 超时设置
                 if 'timeout' in test_data:
                     self.timeout = test_data['timeout']
                     self.logger.debug(f"Timeout set to: {self.timeout}s")
@@ -145,6 +165,12 @@ class BaseTestCase(ABC):
         # 如果设置了质量，添加--quality参数
         if self.quality:
             cmd.extend(['--quality', self.quality])
+            self.logger.debug(f"Auto-added parameter: --quality {self.quality}")
+        
+        # 如果设置了编码，添加--codec参数
+        if hasattr(self, 'codec') and self.codec:
+            cmd.extend(['--codec', self.codec])
+            self.logger.debug(f"Auto-added parameter: --codec {self.codec}")
         
         return cmd
     

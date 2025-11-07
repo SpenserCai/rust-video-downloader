@@ -20,10 +20,9 @@ class TestBVVideoDownload(BaseTestCase):
         self.tags = ['bilibili', 'download', 'basic', 'bv']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        basic_data = test_data.get('basic_download', {}).get('bv_video', {})
-        self.video_url = basic_data.get('url', 'PLACEHOLDER_VIDEO_URL')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality 等参数）
+        test_data = self._load_test_data('bilibili.basic_download.bv_video')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_VIDEO_URL')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
@@ -81,10 +80,9 @@ class TestAVVideoDownload(BaseTestCase):
         self.tags = ['bilibili', 'download', 'basic', 'av']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        basic_data = test_data.get('basic_download', {}).get('av_video', {})
-        self.video_url = basic_data.get('url', 'PLACEHOLDER_AV_VIDEO_URL')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality 等参数）
+        test_data = self._load_test_data('bilibili.basic_download.av_video')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_AV_VIDEO_URL')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
@@ -149,10 +147,9 @@ class TestMultiPageVideoDownload(BaseTestCase):
         self.tags = ['bilibili', 'download', 'basic', 'multi-page']
         self.timeout = 900  # 15分钟（多 P 可能需要更长时间）
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        basic_data = test_data.get('basic_download', {}).get('multi_page', {})
-        self.video_url = basic_data.get('url', 'PLACEHOLDER_MULTI_PAGE_URL')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality 等参数）
+        test_data = self._load_test_data('bilibili.basic_download.multi_page')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_MULTI_PAGE_URL')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
@@ -217,10 +214,9 @@ class TestBangumiEPDownload(BaseTestCase):
         self.tags = ['bilibili', 'download', 'basic', 'bangumi', 'ep']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        basic_data = test_data.get('basic_download', {}).get('bangumi_ep', {})
-        self.video_url = basic_data.get('url', 'PLACEHOLDER_BANGUMI_EP_URL')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality 等参数）
+        test_data = self._load_test_data('bilibili.basic_download.bangumi_ep')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_BANGUMI_EP_URL')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
@@ -285,10 +281,9 @@ class TestBangumiSSDownload(BaseTestCase):
         self.tags = ['bilibili', 'download', 'basic', 'bangumi', 'ss']
         self.timeout = 900  # 15分钟（整季可能需要更长时间）
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        basic_data = test_data.get('basic_download', {}).get('bangumi_ss', {})
-        self.video_url = basic_data.get('url', 'PLACEHOLDER_BANGUMI_SS_URL')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality 等参数）
+        test_data = self._load_test_data('bilibili.basic_download.bangumi_ss')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_BANGUMI_SS_URL')
     
     def get_command(self) -> List[str]:
         """获取执行命令"""

@@ -96,11 +96,10 @@ class TestQualityPriority(BaseTestCase):
         self.tags = ['bilibili', 'quality', 'priority']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        quality_data = test_data.get('quality_selection', {}).get('quality_priority', {})
-        self.video_url = quality_data.get('url', 'PLACEHOLDER_VIDEO_URL')
-        self.quality = quality_data.get('quality', '1080P,720P,480P')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality 等参数）
+        test_data = self._load_test_data('bilibili.quality_selection.quality_priority')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_VIDEO_URL')
+        # quality 已由 _load_test_data 自动加载
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
@@ -158,17 +157,16 @@ class TestCodecPriority(BaseTestCase):
         self.tags = ['bilibili', 'quality', 'codec']
         self.timeout = 600  # 10分钟
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        codec_data = test_data.get('quality_selection', {}).get('codec_priority', {})
-        self.video_url = codec_data.get('url', 'PLACEHOLDER_VIDEO_URL')
-        self.codec = codec_data.get('codec', 'hevc,avc,av1')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 codec 等参数）
+        test_data = self._load_test_data('bilibili.quality_selection.codec_priority')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_VIDEO_URL')
+        # codec 已由 _load_test_data 自动加载
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
+        # _build_base_command 已经包含了 --codec 参数
         cmd = self._build_base_command()
         cmd.extend([
-            '--codec', self.codec,
             self.video_url,
             '--output', str(self.workdir),
         ])
@@ -231,11 +229,10 @@ class TestDolbyVision(BaseTestCase):
         self.tags = ['bilibili', 'quality', 'dolby', 'advanced']
         self.timeout = 900  # 15分钟（杜比视界文件可能较大）
         
-        # 从配置文件加载测试数据
-        test_data = self._load_test_data('bilibili')
-        dolby_data = test_data.get('quality_selection', {}).get('dolby_vision', {})
-        self.video_url = dolby_data.get('url', 'PLACEHOLDER_DOLBY_VISION_URL')
-        self.quality = dolby_data.get('quality', '杜比视界')
+        # 从配置文件加载测试数据（使用嵌套路径，自动处理 quality, auth_file 等参数）
+        test_data = self._load_test_data('bilibili.quality_selection.dolby_vision')
+        self.video_url = test_data.get('url', 'PLACEHOLDER_DOLBY_VISION_URL')
+        # quality 和 auth_file 已由 _load_test_data 自动加载
     
     def get_command(self) -> List[str]:
         """获取执行命令"""
