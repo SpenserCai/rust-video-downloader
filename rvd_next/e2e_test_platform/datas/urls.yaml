@@ -137,7 +137,7 @@ bilibili:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       description: "M4A 音频测试"
     dolby_atmos:
-      url: "PLACEHOLDER_DOLBY_ATMOS_URL"
+      url: "https://www.bilibili.com/video/BV1aGndz5Ee4"
       description: "杜比全景声测试（需要大会员）"
       auth_file: "./cfg/auth.toml"
     flac:
@@ -155,7 +155,7 @@ bilibili:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       api_mode: "tv"
       description: "TV API 模式测试"
-      auth_file: "./cfg/auth.toml"
+      auth_file: "./cfg/tv_auth.toml"
     app_api:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       api_mode: "app"
