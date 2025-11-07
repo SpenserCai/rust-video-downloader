@@ -31,9 +31,14 @@ pub struct BilibiliCdnOptimizer {
     cmcc_regex: Regex,
     /// Regex for replacing any host in URL (for force replacement)
     host_regex: Regex,
+    /// Regex for detecting .mcdn.bilivideo.cn domains (should not be converted to HTTP)
+    mcdn_regex: Regex,
     /// Whether to force replace all bilivideo.com hosts with backup CDN (default: true)
     /// This prevents HTTP redirects to unstable PCDN nodes
     force_replace_host: bool,
+    /// Whether to force use HTTP instead of HTTPS (default: true)
+    /// This bypasses stricter SSL/TLS validation on some CDN nodes
+    force_http: bool,
 }
 
 impl BilibiliCdnOptimizer {
@@ -44,6 +49,7 @@ impl BilibiliCdnOptimizer {
     /// - upos-sz-mirrorcos.bilivideo.com
     ///
     /// Force host replacement is enabled by default to prevent redirects to unstable PCDN nodes.
+    /// Force HTTP is enabled by default to bypass stricter SSL/TLS validation.
     pub fn new() -> Self {
         Self {
             backup_hosts: vec![
@@ -55,7 +61,9 @@ impl BilibiliCdnOptimizer {
                 .expect("Invalid foreign source regex"),
             cmcc_regex: Regex::new(r"-cmcc").expect("Invalid CMCC regex"),
             host_regex: Regex::new(r"://[^/]+/").expect("Invalid host regex"),
+            mcdn_regex: Regex::new(r"\.mcdn\.bilivideo\.cn").expect("Invalid mcdn regex"),
             force_replace_host: true,
+            force_http: true,
         }
     }
 
@@ -72,7 +80,9 @@ impl BilibiliCdnOptimizer {
                 .expect("Invalid foreign source regex"),
             cmcc_regex: Regex::new(r"-cmcc").expect("Invalid CMCC regex"),
             host_regex: Regex::new(r"://[^/]+/").expect("Invalid host regex"),
+            mcdn_regex: Regex::new(r"\.mcdn\.bilivideo\.cn").expect("Invalid mcdn regex"),
             force_replace_host: true,
+            force_http: true,
         }
     }
 
@@ -82,7 +92,12 @@ impl BilibiliCdnOptimizer {
     ///
     /// * `backup_hosts` - List of backup CDN hosts to use
     /// * `force_replace_host` - Whether to force replace all hosts with backup CDN
-    pub fn with_config(backup_hosts: Vec<String>, force_replace_host: bool) -> Self {
+    /// * `force_http` - Whether to force use HTTP instead of HTTPS
+    pub fn with_config(
+        backup_hosts: Vec<String>,
+        force_replace_host: bool,
+        force_http: bool,
+    ) -> Self {
         Self {
             backup_hosts,
             pcdn_regex: Regex::new(r"://[^/]+:\d+/").expect("Invalid PCDN regex"),
@@ -90,7 +105,9 @@ impl BilibiliCdnOptimizer {
                 .expect("Invalid foreign source regex"),
             cmcc_regex: Regex::new(r"-cmcc").expect("Invalid CMCC regex"),
             host_regex: Regex::new(r"://[^/]+/").expect("Invalid host regex"),
+            mcdn_regex: Regex::new(r"\.mcdn\.bilivideo\.cn").expect("Invalid mcdn regex"),
             force_replace_host,
+            force_http,
         }
     }
 
@@ -100,10 +117,12 @@ impl BilibiliCdnOptimizer {
     /// 1. Detects and replaces PCDN URLs (URLs with port numbers)
     /// 2. Detects and replaces foreign source URLs (akamaized.net)
     /// 3. Force replaces all bilivideo.com hosts with backup CDN (if enabled)
+    /// 4. Force replaces HTTPS with HTTP (if enabled, except for .mcdn.bilivideo.cn)
     ///
     /// The force replacement (step 3) is enabled by default to prevent HTTP redirects
-    /// to unstable PCDN nodes, which is a common anti-restriction mechanism used by
-    /// downloaders like BBDown.
+    /// to unstable PCDN nodes. The force HTTP (step 4) is enabled by default to bypass
+    /// stricter SSL/TLS validation on some CDN nodes, which is a common anti-restriction
+    /// mechanism used by downloaders like BBDown.
     ///
     /// # Arguments
     ///
@@ -121,17 +140,17 @@ impl BilibiliCdnOptimizer {
     /// // PCDN URL with port number
     /// let pcdn_url = "https://upos-sz-mirrorali.bilivideo.com:8080/video.m4s";
     /// let optimized = optimizer.optimize_url(pcdn_url);
-    /// // Returns: "https://upos-sz-mirrorcoso1.bilivideo.com/video.m4s"
+    /// // Returns: "http://upos-sz-mirrorcoso1.bilivideo.com/video.m4s"
     ///
     /// // Foreign source URL
     /// let foreign_url = "https://cn-hk-eq-bcache-01.akamaized.net/video.m4s";
     /// let optimized = optimizer.optimize_url(foreign_url);
-    /// // Returns: "https://upos-sz-mirrorcoso1.bilivideo.com/video.m4s"
+    /// // Returns: "http://upos-sz-mirrorcoso1.bilivideo.com/video.m4s"
     ///
     /// // Normal bilivideo.com URL (will be force replaced if enabled)
     /// let normal_url = "https://upos-sz-302ppio.bilivideo.com/video.m4s";
     /// let optimized = optimizer.optimize_url(normal_url);
-    /// // Returns: "https://upos-sz-mirrorcoso1.bilivideo.com/video.m4s"
+    /// // Returns: "http://upos-sz-mirrorcoso1.bilivideo.com/video.m4s"
     /// ```
     pub fn optimize_url(&self, url: &str) -> String {
         let mut optimized = url.to_string();
@@ -168,6 +187,20 @@ impl BilibiliCdnOptimizer {
                 .host_regex
                 .replace(&optimized, format!("://{}/", self.backup_hosts[0]))
                 .to_string();
+        }
+
+        // Step 4: Force use HTTP instead of HTTPS
+        // This bypasses stricter SSL/TLS validation on some CDN nodes
+        // Exception: .mcdn.bilivideo.cn domains should not be converted
+        if self.force_http && optimized.starts_with("https:") {
+            if !self.mcdn_regex.is_match(&optimized) {
+                tracing::debug!("Bilibili: Converting HTTPS to HTTP to bypass SSL validation");
+                optimized = optimized.replace("https:", "http:");
+            } else {
+                tracing::debug!(
+                    "Bilibili: Skipping HTTPS to HTTP conversion for .mcdn.bilivideo.cn domain"
+                );
+            }
         }
 
         optimized
@@ -219,6 +252,7 @@ mod tests {
         assert!(!optimized.contains(":8080"));
         assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
         assert!(optimized.contains("/upgcxcode/video.m4s"));
+        assert!(optimized.starts_with("http:")); // Should be converted to HTTP
     }
 
     #[test]
@@ -232,6 +266,7 @@ mod tests {
         assert!(!optimized.contains("akamaized.net"));
         assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
         assert!(optimized.contains("/upgcxcode/video.m4s"));
+        assert!(optimized.starts_with("http:")); // Should be converted to HTTP
     }
 
     #[test]
@@ -255,10 +290,12 @@ mod tests {
         let normal_url = "https://upos-sz-302ppio.bilivideo.com/upgcxcode/video.m4s";
         let optimized = optimizer.optimize_url(normal_url);
 
-        // Should be replaced with backup host
+        // Should be replaced with backup host and converted to HTTP
         assert!(!optimized.contains("upos-sz-302ppio.bilivideo.com"));
         assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
         assert!(optimized.contains("/upgcxcode/video.m4s"));
+        assert!(optimized.starts_with("http:"));
+        assert!(!optimized.starts_with("https:"));
     }
 
     #[test]
@@ -266,14 +303,74 @@ mod tests {
         let optimizer = BilibiliCdnOptimizer::with_config(
             vec!["upos-sz-mirrorcoso1.bilivideo.com".to_string()],
             false,
+            true,
         );
 
-        // Test normal URL with force replacement disabled
+        // Test normal URL with force replacement disabled but force HTTP enabled
         let normal_url = "https://upos-sz-mirrorcos.bilivideo.com/upgcxcode/video.m4s";
         let optimized = optimizer.optimize_url(normal_url);
 
-        // Should remain unchanged
-        assert_eq!(optimized, normal_url);
+        // Host should remain unchanged but protocol should be HTTP
+        assert!(optimized.contains("upos-sz-mirrorcos.bilivideo.com"));
+        assert!(optimized.starts_with("http:"));
+    }
+
+    #[test]
+    fn test_force_http() {
+        let optimizer = BilibiliCdnOptimizer::new();
+
+        // Test HTTPS URL conversion
+        let https_url = "https://upos-sz-mirrorcos.bilivideo.com/upgcxcode/video.m4s";
+        let optimized = optimizer.optimize_url(https_url);
+
+        // Should be converted to HTTP
+        assert!(optimized.starts_with("http:"));
+        assert!(!optimized.starts_with("https:"));
+    }
+
+    #[test]
+    fn test_force_http_disabled() {
+        let optimizer = BilibiliCdnOptimizer::with_config(
+            vec!["upos-sz-mirrorcoso1.bilivideo.com".to_string()],
+            true,
+            false,
+        );
+
+        // Test with force HTTP disabled
+        let https_url = "https://upos-sz-302ppio.bilivideo.com/upgcxcode/video.m4s";
+        let optimized = optimizer.optimize_url(https_url);
+
+        // Host should be replaced but protocol should remain HTTPS
+        assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
+        assert!(optimized.starts_with("https:"));
+    }
+
+    #[test]
+    fn test_mcdn_exception() {
+        let optimizer = BilibiliCdnOptimizer::new();
+
+        // Test .mcdn.bilivideo.cn domain without port (should not be converted to HTTP)
+        let mcdn_url = "https://example.mcdn.bilivideo.cn/video.m4s";
+        let optimized = optimizer.optimize_url(mcdn_url);
+
+        // Should remain HTTPS (mcdn exception)
+        assert!(optimized.starts_with("https:"));
+        assert!(optimized.contains(".mcdn.bilivideo.cn"));
+    }
+
+    #[test]
+    fn test_mcdn_with_port() {
+        let optimizer = BilibiliCdnOptimizer::new();
+
+        // Test .mcdn.bilivideo.cn domain with port
+        // Port will trigger PCDN replacement, but should still not convert to HTTP
+        let mcdn_url = "https://example.mcdn.bilivideo.cn:8080/video.m4s";
+        let optimized = optimizer.optimize_url(mcdn_url);
+
+        // PCDN detection will replace the host, so it won't be mcdn anymore
+        // This is expected behavior - PCDN takes precedence
+        assert!(!optimized.contains(":8080"));
+        assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
     }
 
     #[test]
@@ -285,6 +382,7 @@ mod tests {
         let optimized = optimizer.optimize_url(pcdn_url);
 
         assert!(optimized.contains("custom-cdn.example.com"));
+        assert!(optimized.starts_with("http:")); // Should be converted to HTTP
     }
 
     #[test]
@@ -296,9 +394,10 @@ mod tests {
         let url = "https://test.akamaized.net:8080/video.m4s";
         let optimized = optimizer.optimize_url(url);
 
-        // Should replace both PCDN and foreign source
+        // Should replace both PCDN and foreign source, and convert to HTTP
         assert!(!optimized.contains(":8080"));
         assert!(!optimized.contains("akamaized.net"));
         assert!(optimized.contains("upos-sz-mirrorcoso1.bilivideo.com"));
+        assert!(optimized.starts_with("http:"));
     }
 }
