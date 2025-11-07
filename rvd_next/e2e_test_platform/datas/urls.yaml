@@ -87,10 +87,10 @@ bilibili:
       url: "PLACEHOLDER_AV_VIDEO_URL"
       description: "AV 号视频下载（请填入实际 AV 号）"
     multi_page:
-      url: "PLACEHOLDER_MULTI_PAGE_URL"
+      url: "https://www.bilibili.com/bangumi/play/ss46085"
       description: "多 P 视频下载（请填入实际多 P 视频 URL）"
     bangumi_ep:
-      url: "PLACEHOLDER_BANGUMI_EP_URL"
+      url: "https://www.bilibili.com/bangumi/play/ep781703"
       description: "番剧 EP 号下载（请填入实际番剧 EP URL）"
     bangumi_ss:
       url: "https://www.bilibili.com/bangumi/play/ss47794"
@@ -99,7 +99,7 @@ bilibili:
   # 批量下载测试
   batch_download:
     favorites:
-      url: "PLACEHOLDER_FAVORITES_URL"
+      url: "https://space.bilibili.com/27213840/favlist?fid=3671310140"
       description: "收藏夹批量下载（请填入实际收藏夹 URL）"
       batch_limit: 5
     user_space:
