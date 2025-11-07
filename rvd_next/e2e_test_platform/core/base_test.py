@@ -105,6 +105,12 @@ class BaseTestCase(ABC):
                         self.requires_auth = True
                         self.auth_file = self.config.resolve_path(auth_file_path)
                         self.logger.info(f"Authentication enabled with file: {self.auth_file}")
+                else:
+                    # 如果 urls.yaml 没有配置 auth_file，检查全局配置
+                    if self.config.auth_file_path:
+                        self.requires_auth = True
+                        # self.auth_file 保持 None，让 _get_auth_file() 使用全局配置
+                        self.logger.debug(f"Will use global auth file from config.yaml")
                 
                 # 2. 质量设置
                 if 'quality' in test_data:
