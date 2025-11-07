@@ -479,6 +479,76 @@ pub trait Platform: Send + Sync {
         None
     }
 
+    /// Validate platform-specific CLI arguments
+    ///
+    /// This allows platforms to validate their specific parameters and return
+    /// helpful error messages if misused. This is called early in the execution
+    /// to catch configuration errors before any network requests.
+    ///
+    /// # Arguments
+    ///
+    /// * `cli` - The CLI arguments to validate
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if validation passes, error otherwise
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns `Ok(())` (no validation). Platforms with specific CLI parameters
+    /// should override this method.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// fn validate_cli_args(&self, cli: &crate::cli::Cli) -> Result<()> {
+    ///     if cli.some_platform_specific_flag && !self.can_handle(cli.url.as_ref().unwrap()) {
+    ///         return Err(DownloaderError::InvalidArgument(
+    ///             "Platform-specific flag used with wrong platform".to_string()
+    ///         ));
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    fn validate_cli_args(&self, _cli: &crate::cli::Cli) -> Result<()> {
+        Ok(())
+    }
+
+    /// Create an authentication provider for this platform
+    ///
+    /// This method allows platforms to create their own authentication providers
+    /// based on the login mode specified in CLI arguments. This keeps platform-specific
+    /// authentication logic encapsulated within each platform implementation.
+    ///
+    /// # Arguments
+    ///
+    /// * `cli` - The CLI arguments containing login mode information
+    ///
+    /// # Returns
+    ///
+    /// A boxed `AuthProvider` for this platform, or an error if the platform
+    /// doesn't support authentication or the login mode is invalid.
+    ///
+    /// # Default Implementation
+    ///
+    /// Returns an error indicating authentication is not supported.
+    /// Platforms that support authentication should override this method.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// fn create_auth_provider(&self, cli: &crate::cli::Cli) -> Result<Box<dyn crate::auth::AuthProvider>> {
+    ///     let mode = determine_login_mode(cli)?;
+    ///     Ok(Box::new(MyPlatformAuthProvider::new(self.client.clone(), mode)))
+    /// }
+    /// ```
+    fn create_auth_provider(&self, _cli: &crate::cli::Cli) -> Result<Box<dyn crate::auth::AuthProvider>> {
+        Err(crate::error::DownloaderError::FeatureNotSupported {
+            platform: self.name().to_string(),
+            feature: "authentication".to_string(),
+        })
+    }
+
     /// Runtime type conversion support
     ///
     /// Allows downcasting to the concrete platform type for accessing

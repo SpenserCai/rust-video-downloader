@@ -200,6 +200,9 @@ impl Orchestrator {
         let platform = self.registry.select_platform(url)?;
         tracing::info!("Using platform: {}", platform.name());
 
+        // Validate platform-specific CLI arguments
+        platform.validate_cli_args(&cli)?;
+
         // Display platform capabilities in verbose mode
         if cli.verbose {
             let meta = platform.metadata();

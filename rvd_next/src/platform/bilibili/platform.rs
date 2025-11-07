@@ -255,6 +255,56 @@ impl Platform for BilibiliPlatform {
         }
     }
 
+    fn validate_cli_args(&self, cli: &crate::cli::Cli) -> Result<()> {
+        // Validate Bilibili-specific login flags
+        if cli.login_bilibili_web || cli.login_bilibili_tv {
+            // If URL is provided, verify it's a Bilibili URL
+            if let Some(ref url) = cli.url {
+                if !self.can_handle(url) {
+                    return Err(DownloaderError::InvalidArgument(format!(
+                        "Bilibili login flags (--login-bilibili-web/--login-bilibili-tv) can only be used with Bilibili URLs.\n\
+                        Got URL: {}\n\
+                        Hint: Remove the URL or use a Bilibili URL, or use generic --login-qrcode flag.",
+                        url
+                    )));
+                }
+            }
+            // If no URL provided, that's fine - login-only mode
+        }
+
+        // Validate Bilibili-specific API flags
+        if cli.use_tv_api || cli.use_app_api || cli.use_intl_api {
+            if let Some(ref url) = cli.url {
+                if !self.can_handle(url) {
+                    tracing::warn!(
+                        "Bilibili API mode flags (--use-tv-api/--use-app-api/--use-intl-api) \
+                        are being used with a non-Bilibili URL: {}",
+                        url
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn create_auth_provider(&self, cli: &crate::cli::Cli) -> Result<Box<dyn crate::auth::AuthProvider>> {
+        use crate::auth::providers::BilibiliAuthProvider;
+        
+        // Determine API mode from CLI
+        let api_mode = if cli.login_bilibili_tv {
+            super::ApiMode::TV
+        } else if cli.login_bilibili_web || cli.login_qrcode {
+            super::ApiMode::Web
+        } else {
+            return Err(DownloaderError::InvalidArgument(
+                "No valid Bilibili login mode specified".to_string()
+            ));
+        };
+
+        Ok(Box::new(BilibiliAuthProvider::new(self.client.clone(), api_mode)))
+    }
+
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }

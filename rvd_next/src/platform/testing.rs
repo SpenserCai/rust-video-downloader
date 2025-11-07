@@ -110,8 +110,8 @@ pub mod mock {
 
         fn can_handle(&self, url: &str) -> bool {
             self.url_patterns.iter().any(|pattern| {
-                if pattern.starts_with('^') {
-                    url.starts_with(&pattern[1..])
+                if let Some(stripped) = pattern.strip_prefix('^') {
+                    url.starts_with(stripped)
                 } else {
                     url.contains(pattern)
                 }

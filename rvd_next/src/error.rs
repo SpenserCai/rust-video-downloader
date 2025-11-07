@@ -66,6 +66,9 @@ pub enum DownloaderError {
     #[error("Invalid URL: {0}")]
     InvalidUrl(String),
 
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
+
     #[error("API error: {0}")]
     Api(String),
 
