@@ -103,7 +103,7 @@ bilibili:
       description: "收藏夹批量下载（请填入实际收藏夹 URL）"
       batch_limit: 5
     user_space:
-      url: "PLACEHOLDER_USER_SPACE_URL"
+      url: "https://space.bilibili.com/102647921"
       description: "UP 主空间批量下载（请填入实际 UP 主空间 URL）"
       batch_limit: 5
     media_list:
@@ -231,18 +231,18 @@ bilibili:
     batch_formats:
       urls:
         - "PLACEHOLDER_FAVORITES_URL"
-        - "PLACEHOLDER_USER_SPACE_URL"
+        - "https://space.bilibili.com/102647921"
         - "PLACEHOLDER_MEDIA_LIST_URL"
       description: "批量 URL 格式解析"
   
   # WBI 签名验证测试
   wbi_signature:
     space_info:
-      url: "PLACEHOLDER_USER_SPACE_URL"
+      url: "https://space.bilibili.com/102647921"
       description: "测试 WBI 签名（通过 --info-only 模式）"
       info_only: true
     space_download:
-      url: "PLACEHOLDER_USER_SPACE_URL"
+      url: "https://space.bilibili.com/102647921"
       description: "测试 WBI 签名（实际下载）"
       batch_limit: 3
   
