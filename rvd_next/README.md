@@ -188,22 +188,55 @@ rvd <URL> --output "downloads/{uploader}/{title}.mp4"
 
 RVD Next 采用分层架构设计：
 
-```
-┌─────────────────────────────────────┐
-│         CLI / Application           │  命令行界面和应用层
-├─────────────────────────────────────┤
-│         Orchestrator                │  下载流程编排
-├─────────────────────────────────────┤
-│      Platform Registry              │  平台注册和选择
-├─────────────────────────────────────┤
-│  Platform Trait (抽象层)            │  统一的平台接口
-├──────────┬──────────┬───────────────┤
-│ Bilibili │ YouTube  │  Douyin ...   │  具体平台实现
-├──────────┴──────────┴───────────────┤
-│  Core (下载、混流、进度跟踪)         │  核心功能模块
-├─────────────────────────────────────┤
-│  Utils (HTTP、配置、文件)            │  工具模块
-└─────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "应用层"
+        CLI[CLI / Application<br/>命令行界面]
+        Orch[Orchestrator<br/>下载流程编排]
+    end
+    
+    subgraph "平台管理层"
+        Registry[Platform Registry<br/>平台注册和选择]
+    end
+    
+    subgraph "平台抽象层"
+        Trait[Platform Trait<br/>统一的平台接口]
+    end
+    
+    subgraph "平台实现层"
+        Bilibili[Bilibili<br/>哔哩哔哩]
+        YouTube[YouTube<br/>计划中]
+        Douyin[Douyin<br/>计划中]
+    end
+    
+    subgraph "核心功能层"
+        Core[Core Modules<br/>下载、混流、进度跟踪]
+    end
+    
+    subgraph "工具层"
+        Utils[Utils<br/>HTTP、配置、文件]
+    end
+    
+    CLI --> Orch
+    Orch --> Registry
+    Registry --> Trait
+    Trait --> Bilibili
+    Trait --> YouTube
+    Trait --> Douyin
+    Bilibili --> Core
+    YouTube --> Core
+    Douyin --> Core
+    Core --> Utils
+    
+    style CLI fill:#e1f5ff
+    style Orch fill:#e1f5ff
+    style Registry fill:#fff3e0
+    style Trait fill:#f3e5f5
+    style Bilibili fill:#c8e6c9
+    style YouTube fill:#ffccbc
+    style Douyin fill:#ffccbc
+    style Core fill:#fff9c4
+    style Utils fill:#f5f5f5
 ```
 
 ### 核心概念

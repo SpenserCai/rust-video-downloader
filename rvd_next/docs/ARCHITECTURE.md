@@ -29,64 +29,86 @@ RVD Next 采用模块化、可扩展的架构设计，核心目标是支持多�
 
 ## 架构图
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    CLI / Application                    │
-│                  (src/cli, src/main.rs)                 │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                     Orchestrator                        │
-│                  (src/app/orchestrator.rs)              │
-│  - 流程编排                                              │
-│  - 认证管理                                              │
-│  - 批量下载协调                                          │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                  Platform Registry                      │
-│                  (src/app/registry.rs)                  │
-│  - 平台注册                                              │
-│  - URL 匹配和平台选择                                    │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Platform Trait                        │
-│                  (src/platform/trait.rs)                │
-│  - can_handle()      - parse_video()                    │
-│  - get_streams()     - get_subtitles()                  │
-│  - get_danmaku()     - get_chapters()                   │
-└────────────────────────┬────────────────────────────────┘
-                         │
-         ┌───────────────┼───────────────┐
-         ▼               ▼               ▼
-    ┌─────────┐    ┌─────────┐    ┌─────────┐
-    │Bilibili │    │ YouTube │    │ Douyin  │
-    │Platform │    │Platform │    │Platform │
-    └─────────┘    └─────────┘    └─────────┘
-         │               │               │
-         └───────────────┼───────────────┘
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                    Core Modules                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
-│  │Downloader│  │  Muxer   │  │ Progress │             │
-│  └──────────┘  └──────────┘  └──────────┘             │
-│  ┌──────────┐  ┌──────────┐                            │
-│  │ Subtitle │  │ Danmaku  │                            │
-│  └──────────┘  └──────────┘                            │
-└─────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Utility Modules                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
-│  │   HTTP   │  │  Config  │  │   File   │             │
-│  └──────────┘  └──────────┘  └──────────┘             │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "应用层 Application Layer"
+        CLI[CLI / Application<br/>src/cli, src/main.rs]
+    end
+    
+    subgraph "编排层 Orchestration Layer"
+        Orch[Orchestrator<br/>src/app/orchestrator.rs<br/>━━━━━━━━━━━━━━<br/>• 流程编排<br/>• 认证管理<br/>• 批量下载协调]
+    end
+    
+    subgraph "注册层 Registry Layer"
+        Registry[Platform Registry<br/>src/app/registry.rs<br/>━━━━━━━━━━━━━━<br/>• 平台注册<br/>• URL 匹配和平台选择]
+    end
+    
+    subgraph "抽象层 Abstraction Layer"
+        Trait[Platform Trait<br/>src/platform/trait.rs<br/>━━━━━━━━━━━━━━<br/>• can_handle<br/>• parse_video<br/>• get_streams<br/>• get_subtitles<br/>• get_danmaku<br/>• get_chapters]
+    end
+    
+    subgraph "平台实现层 Platform Implementation Layer"
+        Bilibili[🎬 Bilibili Platform<br/>已实现]
+        YouTube[📺 YouTube Platform<br/>计划中]
+        Douyin[🎵 Douyin Platform<br/>计划中]
+    end
+    
+    subgraph "核心功能层 Core Modules Layer"
+        Downloader[⬇️ Downloader<br/>下载引擎]
+        Muxer[🔄 Muxer<br/>混流器]
+        Progress[📊 Progress<br/>进度跟踪]
+        Subtitle[📝 Subtitle<br/>字幕处理]
+        Danmaku[💬 Danmaku<br/>弹幕处理]
+    end
+    
+    subgraph "工具层 Utility Layer"
+        HTTP[🌐 HTTP Client<br/>HTTP 客户端]
+        Config[⚙️ Config<br/>配置管理]
+        File[📁 File Utils<br/>文件工具]
+    end
+    
+    CLI --> Orch
+    Orch --> Registry
+    Registry --> Trait
+    Trait --> Bilibili
+    Trait --> YouTube
+    Trait --> Douyin
+    
+    Bilibili --> Downloader
+    Bilibili --> Muxer
+    Bilibili --> Progress
+    Bilibili --> Subtitle
+    Bilibili --> Danmaku
+    
+    YouTube -.-> Downloader
+    YouTube -.-> Muxer
+    Douyin -.-> Downloader
+    Douyin -.-> Muxer
+    
+    Downloader --> HTTP
+    Muxer --> File
+    Progress --> HTTP
+    Subtitle --> HTTP
+    Danmaku --> HTTP
+    
+    Orch --> Config
+    Registry --> Config
+    
+    style CLI fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Orch fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Registry fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style Trait fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Bilibili fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style YouTube fill:#ffccbc,stroke:#d84315,stroke-width:1px,stroke-dasharray: 5 5
+    style Douyin fill:#ffccbc,stroke:#d84315,stroke-width:1px,stroke-dasharray: 5 5
+    style Downloader fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Muxer fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Progress fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Subtitle fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Danmaku fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style HTTP fill:#f5f5f5,stroke:#616161,stroke-width:2px
+    style Config fill:#f5f5f5,stroke:#616161,stroke-width:2px
+    style File fill:#f5f5f5,stroke:#616161,stroke-width:2px
 ```
 
 ## 核心模块详解
@@ -255,62 +277,103 @@ bilibili/
 
 ### 单视频下载流程
 
-```
-用户输入 URL
-    │
-    ▼
-Orchestrator.run()
-    │
-    ├─> Registry.select_platform(url)
-    │       └─> 返回 Platform
-    │
-    ├─> Platform.parse_video(url, auth)
-    │       └─> 返回 VideoInfo
-    │
-    ├─> 用户选择分P（如果有多个）
-    │
-    ├─> Platform.get_streams(context, auth)
-    │       └─> 返回 Vec<Stream>
-    │
-    ├─> 选择最佳流（自动或交互式）
-    │
-    ├─> Downloader.download(video_url)
-    │   Downloader.download(audio_url)
-    │       └─> 下载到临时目录
-    │
-    ├─> Platform.get_subtitles() (可选)
-    ├─> Platform.get_danmaku() (可选)
-    ├─> Platform.get_chapters() (可选)
-    │
-    ├─> Muxer.mux(video, audio, subtitles, chapters)
-    │       └─> 输出最终文件
-    │
-    └─> 清理临时文件
+```mermaid
+flowchart TD
+    Start([用户输入 URL]) --> Run[Orchestrator.run]
+    
+    Run --> SelectPlatform[Registry.select_platform<br/>选择平台]
+    SelectPlatform --> |返回 Platform| ParseVideo[Platform.parse_video<br/>解析视频信息]
+    
+    ParseVideo --> |返回 VideoInfo| CheckPages{是否有多个分P?}
+    CheckPages --> |是| UserSelect[用户选择分P]
+    CheckPages --> |否| GetStreams
+    UserSelect --> GetStreams[Platform.get_streams<br/>获取流信息]
+    
+    GetStreams --> |返回 Vec&lt;Stream&gt;| SelectBest[选择最佳流<br/>自动或交互式]
+    
+    SelectBest --> DownloadVideo[Downloader.download<br/>下载视频流]
+    SelectBest --> DownloadAudio[Downloader.download<br/>下载音频流]
+    
+    DownloadVideo --> |保存到临时目录| CheckOptional{需要额外内容?}
+    DownloadAudio --> |保存到临时目录| CheckOptional
+    
+    CheckOptional --> |字幕| GetSubtitles[Platform.get_subtitles<br/>下载字幕]
+    CheckOptional --> |弹幕| GetDanmaku[Platform.get_danmaku<br/>下载弹幕]
+    CheckOptional --> |章节| GetChapters[Platform.get_chapters<br/>获取章节]
+    CheckOptional --> |否| Mux
+    
+    GetSubtitles --> Mux[Muxer.mux<br/>混流合并]
+    GetDanmaku --> Mux
+    GetChapters --> Mux
+    
+    Mux --> |输出最终文件| Cleanup[清理临时文件]
+    Cleanup --> End([完成])
+    
+    style Start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Run fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style SelectPlatform fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style ParseVideo fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style GetStreams fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style SelectBest fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style DownloadVideo fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style DownloadAudio fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style GetSubtitles fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style GetDanmaku fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style GetChapters fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style Mux fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style Cleanup fill:#f5f5f5,stroke:#616161,stroke-width:2px
+    style End fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style CheckPages fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style CheckOptional fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style UserSelect fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
 ```
 
 ### 批量下载流程
 
-```
-用户输入批量 URL
-    │
-    ▼
-Orchestrator.run_batch_download()
-    │
-    ├─> Platform.is_batch_url(url)
-    │       └─> 返回 true
-    │
-    └─> 循环：
-        │
-        ├─> Platform.parse_batch_page(url, continuation)
-        │       └─> 返回 BatchResult (一页视频)
-        │
-        ├─> 对每个视频：
-        │   └─> 执行单视频下载流程
-        │
-        ├─> 检查 has_more
-        │   └─> 如果有更多，更新 continuation，继续循环
-        │
-        └─> 完成
+```mermaid
+flowchart TD
+    Start([用户输入批量 URL]) --> RunBatch[Orchestrator.run_batch_download]
+    
+    RunBatch --> CheckBatch{Platform.is_batch_url<br/>是否为批量 URL?}
+    CheckBatch --> |是| InitLoop[初始化循环<br/>continuation = None<br/>page_num = 1]
+    CheckBatch --> |否| Error([错误: 非批量 URL])
+    
+    InitLoop --> ParsePage[Platform.parse_batch_page<br/>获取一页视频]
+    
+    ParsePage --> |返回 BatchResult| DisplayInfo[显示页面信息<br/>当前页/总页数]
+    
+    DisplayInfo --> ProcessVideos[处理当前页的视频]
+    
+    ProcessVideos --> ProcessLoop{遍历每个视频}
+    ProcessLoop --> |下一个视频| SingleDownload[执行单视频下载流程<br/>见上图]
+    SingleDownload --> ProcessLoop
+    ProcessLoop --> |全部完成| CheckMore{BatchResult.has_more<br/>是否有更多页?}
+    
+    CheckMore --> |是| UpdateContinuation[更新 continuation<br/>page_num++]
+    UpdateContinuation --> SafetyCheck{page_num > 1000?<br/>安全检查}
+    SafetyCheck --> |否| ParsePage
+    SafetyCheck --> |是| Warning[⚠️ 达到最大页数限制]
+    Warning --> Complete
+    
+    CheckMore --> |否| Complete[完成批量下载]
+    Complete --> End([结束])
+    
+    style Start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style RunBatch fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style CheckBatch fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style InitLoop fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style ParsePage fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style DisplayInfo fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
+    style ProcessVideos fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style ProcessLoop fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style SingleDownload fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style CheckMore fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style UpdateContinuation fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style SafetyCheck fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style Warning fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style Complete fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style End fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style Error fill:#ffebee,stroke:#c62828,stroke-width:2px
 ```
 
 ## 扩展性设计

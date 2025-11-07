@@ -40,6 +40,50 @@
 
 #### 开发流程
 
+```mermaid
+graph TD
+    Start([开始贡献]) --> Fork[🍴 Fork 仓库<br/>在 GitHub 上 Fork]
+    Fork --> Clone[📥 克隆到本地<br/>git clone]
+    Clone --> Branch[🌿 创建分支<br/>git checkout -b feature/xxx]
+    
+    Branch --> Dev[💻 开发功能<br/>编写代码]
+    Dev --> Test[🧪 运行测试<br/>cargo test]
+    
+    Test --> |失败| Dev
+    Test --> |通过| Lint[🔍 代码检查<br/>cargo clippy]
+    
+    Lint --> |有问题| Dev
+    Lint --> |通过| Format[✨ 格式化<br/>cargo fmt]
+    
+    Format --> Commit[📝 提交代码<br/>git commit -m "feat: xxx"]
+    Commit --> Push[⬆️ 推送到 GitHub<br/>git push origin]
+    
+    Push --> PR[🔀 创建 Pull Request<br/>填写 PR 模板]
+    PR --> Review[👀 代码审查<br/>等待维护者审查]
+    
+    Review --> |需要修改| Feedback[💬 根据反馈修改]
+    Feedback --> Dev
+    
+    Review --> |通过| Merge[✅ 合并到主分支]
+    Merge --> End([贡献完成 🎉])
+    
+    style Start fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Fork fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Clone fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style Branch fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Dev fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Test fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style Lint fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style Format fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
+    style Commit fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style Push fill:#b2dfdb,stroke:#00796b,stroke-width:2px
+    style PR fill:#f8bbd0,stroke:#c2185b,stroke-width:2px
+    style Review fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style Feedback fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style Merge fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style End fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+```
+
 1. **Fork 仓库**
    ```bash
    # 在 GitHub 上 Fork 项目

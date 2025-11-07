@@ -4,6 +4,43 @@
 
 ## 📚 文档导航
 
+```mermaid
+graph LR
+    subgraph "新手入门 🎓"
+        README[📖 README<br/>项目简介和快速开始]
+        USER[📘 用户指南<br/>详细使用说明]
+        CONFIG[⚙️ 配置文件<br/>配置详解]
+    end
+    
+    subgraph "开发者文档 👨‍💻"
+        ARCH[🏗️ 架构设计<br/>系统架构和设计理念]
+        DEV[🔧 开发指南<br/>添加新平台和贡献]
+        API[📚 API 文档<br/>库 API 使用说明]
+    end
+    
+    subgraph "迁移和更新 🔄"
+        MIGRATE[🚀 迁移指南<br/>从旧版本迁移]
+        CHANGELOG[📝 更新日志<br/>版本更新记录]
+    end
+    
+    README --> USER
+    USER --> CONFIG
+    
+    ARCH --> DEV
+    DEV --> API
+    
+    USER -.-> MIGRATE
+    
+    style README fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style USER fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style CONFIG fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style ARCH fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style DEV fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style API fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style MIGRATE fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style CHANGELOG fill:#f5f5f5,stroke:#616161,stroke-width:2px
+```
+
 ### 新手入门
 
 - **[README](../README.md)** - 项目简介和快速开始
@@ -129,6 +166,49 @@
 **适合人群**: 旧版本用户
 
 ## 🎓 学习路径
+
+```mermaid
+graph TD
+    subgraph "初学者路径 🌱"
+        B1[📖 阅读 README<br/>了解项目] --> B2[📦 安装程序<br/>按照安装指南]
+        B2 --> B3[🚀 快速开始<br/>尝试基本功能]
+        B3 --> B4[📘 用户指南<br/>学习更多功能]
+        B4 --> B5[⚙️ 配置文件<br/>根据需要配置]
+    end
+    
+    subgraph "进阶用户路径 🚀"
+        A1[📘 用户指南<br/>高级功能部分] --> A2[⚙️ 配置文件<br/>所有选项]
+        A2 --> A3[🏗️ 架构设计<br/>理解内部实现]
+        A3 --> A4[📚 API 文档<br/>作为库使用]
+    end
+    
+    subgraph "开发者路径 👨‍💻"
+        D1[🏗️ 架构设计<br/>理解系统设计] --> D2[🔧 开发指南<br/>设置开发环境]
+        D2 --> D3[➕ 添加新平台<br/>学习扩展方法]
+        D3 --> D4[📚 API 文档<br/>了解核心 API]
+        D4 --> D5[💻 参考代码<br/>Bilibili 实现]
+    end
+    
+    B5 -.-> A1
+    A4 -.-> D1
+    
+    style B1 fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style B2 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style B3 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style B4 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style B5 fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    
+    style A1 fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style A2 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style A3 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style A4 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    
+    style D1 fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style D2 fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
+    style D3 fill:#c5e1a5,stroke:#558b2f,stroke-width:2px
+    style D4 fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style D5 fill:#ffccbc,stroke:#d84315,stroke-width:2px
+```
 
 ### 初学者路径
 

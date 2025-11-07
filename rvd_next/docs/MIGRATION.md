@@ -6,6 +6,22 @@
 
 ### 架构变化
 
+```mermaid
+graph LR
+    subgraph "旧版本 RVD"
+        Old[单体架构<br/>━━━━━━━━<br/>• Bilibili 专用<br/>• 功能混合<br/>• 难以扩展]
+    end
+    
+    subgraph "RVD Next"
+        New[模块化架构<br/>━━━━━━━━<br/>• 多平台支持<br/>• 分层设计<br/>• Trait 插件系统]
+    end
+    
+    Old -->|重构升级| New
+    
+    style Old fill:#ffccbc,stroke:#d84315,stroke-width:2px
+    style New fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+```
+
 | 方面 | 旧版本 | RVD Next |
 |------|--------|----------|
 | 架构 | 单体架构，Bilibili 专用 | 模块化架构，多平台支持 |
