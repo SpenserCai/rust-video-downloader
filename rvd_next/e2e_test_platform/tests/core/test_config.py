@@ -40,7 +40,7 @@ class TestDefaultConfig(BaseTestCase):
         validations = []
         
         # 验证输出包含成功信息
-        output_lower = result.output.lower()
+        output_lower = (result.output or "").lower()
         has_success = any(keyword in output_lower for keyword in [
             'completed', 'success', '完成', '成功', 'muxed to'
         ])
@@ -111,7 +111,7 @@ class TestCustomConfig(BaseTestCase):
         validations = []
         
         # 验证输出包含成功信息
-        output_lower = result.output.lower()
+        output_lower = (result.output or "").lower()
         has_success = any(keyword in output_lower for keyword in [
             'completed', 'success', '完成', '成功', 'muxed to'
         ])
@@ -182,7 +182,7 @@ class TestCLIPriority(BaseTestCase):
         validations = []
         
         # 验证输出包含成功信息
-        output_lower = result.output.lower()
+        output_lower = (result.output or "").lower()
         has_success = any(keyword in output_lower for keyword in [
             'completed', 'success', '完成', '成功', 'muxed to'
         ])
