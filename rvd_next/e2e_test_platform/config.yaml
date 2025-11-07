@@ -6,7 +6,7 @@ platform:
   executable: "../target/release/rvd"
   
   # RVD配置文件路径（可选，用于指定rvd的config.toml）
-  config_file: "./cfg/rvd.toml"
+  config_file: "./cfg/auth.toml"
   
   # 认证文件路径（可选，用于需要认证的测试，指向auth.toml）
   # 如果测试用例没有单独指定auth_file，将使用此全局配置
