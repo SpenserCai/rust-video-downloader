@@ -66,6 +66,12 @@
 # Equivalent to BBDown's --force-replace-host option (enabled by default).
 # force_replace_host = true
 
+# Force use HTTP instead of HTTPS for downloads (default: true)
+# This bypasses stricter SSL/TLS validation on some CDN nodes, especially for audio streams.
+# Equivalent to BBDown's --force-http option (enabled by default).
+# Exception: .mcdn.bilivideo.cn domains will remain HTTPS.
+# force_http = true
+
 # Enable PCDN (P2P CDN) replacement (default: true)
 # When enabled, URLs with port numbers (e.g., :8080) will be replaced with backup CDN
 # enable_pcdn_replacement = true
