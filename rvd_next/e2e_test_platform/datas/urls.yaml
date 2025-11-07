@@ -1,62 +1,317 @@
 # 测试URL配置文件
 # 请将占位符替换为实际的URL
+# 占位符格式：PLACEHOLDER_XXX_URL
 
+# ============================================
+# 整体级别测试数据 (Core Tests)
+# ============================================
+core:
+  # 下载器测试
+  downloader:
+    builtin:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试内置多线程下载器"
+    aria2c:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试 aria2c 外部下载器"
+      use_aria2c: true
+  
+  # 混流器测试
+  muxer:
+    basic:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试基础混流功能"
+    with_subtitle:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试字幕嵌入"
+    skip_mux:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试跳过混流模式"
+  
+  # 配置管理测试
+  config:
+    default:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试默认配置"
+    custom:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试自定义配置文件"
+      config_file: "./cfg/rvd.toml"
+  
+  # 输出模板测试
+  output_template:
+    default:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试默认输出路径"
+    custom:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试自定义输出模板"
+      output_template: "{title}_{bvid}"
+  
+  # HTTP 客户端配置测试
+  http_client:
+    default_user_agent:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试默认 User-Agent"
+      log_user_agent: true
+    custom_user_agent:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试自定义 User-Agent"
+      user_agent: "CustomBot/1.0"
+  
+  # 临时文件管理测试
+  temp_files:
+    normal_cleanup:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试正常下载后清理"
+    failed_cleanup:
+      url: "INVALID_URL"
+      description: "测试失败后清理"
+  
+  # 错误处理测试
+  error_handling:
+    disk_space:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "测试磁盘空间错误处理"
+
+# ============================================
+# Bilibili 平台测试数据 (Bilibili-Specific Tests)
+# ============================================
+bilibili:
+  # 基础下载测试
+  basic_download:
+    bv_video:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "BV 号视频下载"
+    av_video:
+      url: "PLACEHOLDER_AV_VIDEO_URL"
+      description: "AV 号视频下载（请填入实际 AV 号）"
+    multi_page:
+      url: "PLACEHOLDER_MULTI_PAGE_URL"
+      description: "多 P 视频下载（请填入实际多 P 视频 URL）"
+    bangumi_ep:
+      url: "PLACEHOLDER_BANGUMI_EP_URL"
+      description: "番剧 EP 号下载（请填入实际番剧 EP URL）"
+    bangumi_ss:
+      url: "https://www.bilibili.com/bangumi/play/ss47794"
+      description: "番剧 SS 号下载"
+  
+  # 批量下载测试
+  batch_download:
+    favorites:
+      url: "PLACEHOLDER_FAVORITES_URL"
+      description: "收藏夹批量下载（请填入实际收藏夹 URL）"
+      batch_limit: 5
+    user_space:
+      url: "PLACEHOLDER_USER_SPACE_URL"
+      description: "UP 主空间批量下载（请填入实际 UP 主空间 URL）"
+      batch_limit: 5
+    media_list:
+      url: "PLACEHOLDER_MEDIA_LIST_URL"
+      description: "合集批量下载（请填入实际合集 URL）"
+      batch_limit: 5
+    series:
+      url: "PLACEHOLDER_SERIES_URL"
+      description: "系列批量下载（请填入实际系列 URL）"
+      batch_limit: 5
+  
+  # 质量选择测试
+  quality_selection:
+    quality_priority:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      quality: "720P"
+      description: "质量优先级测试"
+    codec_priority:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      codec: "hevc"
+      description: "编码优先级测试"
+    dolby_vision:
+      url: "PLACEHOLDER_DOLBY_VISION_URL"
+      quality: "杜比视界"
+      description: "杜比视界质量测试（需要大会员）"
+      auth_file: "./cfg/auth.toml"
+  
+  # 音频格式测试
+  audio_formats:
+    m4a:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "M4A 音频测试"
+    dolby_atmos:
+      url: "PLACEHOLDER_DOLBY_ATMOS_URL"
+      description: "杜比全景声测试（需要大会员）"
+      auth_file: "./cfg/auth.toml"
+    flac:
+      url: "PLACEHOLDER_FLAC_URL"
+      description: "FLAC 无损音频测试（需要大会员）"
+      auth_file: "./cfg/auth.toml"
+  
+  # API 模式测试
+  api_modes:
+    web_api:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      api_mode: "web"
+      description: "Web API 模式测试"
+    tv_api:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      api_mode: "tv"
+      description: "TV API 模式测试"
+      auth_file: "./cfg/auth.toml"
+    app_api:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      api_mode: "app"
+      description: "APP API 模式测试"
+  
+  # 弹幕测试
+  danmaku:
+    xml_format:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      format: "xml"
+      description: "XML 弹幕下载"
+    ass_format:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      format: "ass"
+      description: "ASS 弹幕下载"
+  
+  # 字幕测试
+  subtitle:
+    single_subtitle:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "单字幕下载"
+    multi_subtitle:
+      url: "PLACEHOLDER_MULTI_SUBTITLE_URL"
+      description: "多语言字幕下载（请填入有多语言字幕的视频 URL）"
+  
+  # 章节测试
+  chapters:
+    with_chapters:
+      url: "PLACEHOLDER_CHAPTERS_URL"
+      description: "有章节视频测试（请填入有章节信息的视频 URL）"
+    bangumi_chapters:
+      url: "PLACEHOLDER_BANGUMI_CHAPTERS_URL"
+      description: "番剧章节测试（请填入番剧 URL）"
+  
+  # CDN 优化测试
+  cdn_optimization:
+    pcdn_url:
+      url: "PLACEHOLDER_PCDN_URL"
+      description: "PCDN URL 测试（请填入 PCDN URL）"
+    cmcc_cdn:
+      url: "PLACEHOLDER_CMCC_URL"
+      description: "CMCC CDN 测试（请填入 CMCC CDN URL）"
+  
+  # 认证功能测试
+  authentication:
+    cookie_auth:
+      url: "PLACEHOLDER_VIP_URL"
+      description: "Cookie 认证测试（需要大会员内容）"
+      auth_file: "./cfg/auth.toml"
+    token_auth:
+      url: "PLACEHOLDER_VIP_URL"
+      description: "Token 认证测试（需要大会员内容）"
+      auth_file: "./cfg/auth.toml"
+  
+  # 信息查询测试
+  info_query:
+    basic_info:
+      url: "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "基础信息查询"
+      info_only: true
+    batch_info:
+      url: "https://www.bilibili.com/bangumi/play/ss47794"
+      description: "批量信息查询"
+      info_only: true
+  
+  # URL 解析测试
+  url_parsing:
+    bv_formats:
+      urls:
+        - "BV16vpizyEpY"
+        - "https://www.bilibili.com/video/BV16vpizyEpY"
+      description: "BV 号格式解析"
+    batch_formats:
+      urls:
+        - "PLACEHOLDER_FAVORITES_URL"
+        - "PLACEHOLDER_USER_SPACE_URL"
+        - "PLACEHOLDER_MEDIA_LIST_URL"
+      description: "批量 URL 格式解析"
+  
+  # WBI 签名验证测试
+  wbi_signature:
+    space_info:
+      url: "PLACEHOLDER_USER_SPACE_URL"
+      description: "测试 WBI 签名（通过 --info-only 模式）"
+      info_only: true
+    space_download:
+      url: "PLACEHOLDER_USER_SPACE_URL"
+      description: "测试 WBI 签名（实际下载）"
+      batch_limit: 3
+  
+  # Cheese 课程测试
+  cheese:
+    course_ep:
+      url: "PLACEHOLDER_CHEESE_EP_URL"
+      description: "Cheese 课程 EP 下载（如 https://www.bilibili.com/cheese/play/ep123456）"
+    course_ss:
+      url: "PLACEHOLDER_CHEESE_SS_URL"
+      description: "Cheese 课程 SS 下载（如 https://www.bilibili.com/cheese/play/ss123456）"
+  
+  # 短链接解析测试
+  short_url:
+    video_short:
+      url: "PLACEHOLDER_B23TV_URL"
+      description: "短链接到视频（如 https://b23.tv/xxxxx）"
+    bangumi_short:
+      url: "PLACEHOLDER_B23TV_BANGUMI_URL"
+      description: "短链接到番剧（如 https://b23.tv/xxxxx）"
+
+# ============================================
+# 兼容旧版测试用例
+# ============================================
 # 单视频下载测试
 single_video:
-  # 普通视频URL（BV号或完整URL）
   url: "https://www.bilibili.com/video/BV16vpizyEpY"
   description: "用于测试单视频下载功能"
 
 # 批量下载测试
 batch_download:
-  # 播放列表/收藏夹URL
   playlist_url: "https://www.bilibili.com/bangumi/play/ss47794"
-  expected_count: 12 # 预期视频数量
+  expected_count: 12
   description: "用于测试批量下载功能"
   quality: "480P"
   auth_file: "./cfg/rvd.toml"
 
 # 质量选择测试
 quality_selection:
-  # 支持多种质量的视频URL
   url: "https://www.bilibili.com/video/BV16vpizyEpY"
-  quality: "720P" # 测试时使用的质量
+  quality: "720P"
   qualities: ["1080P", "720P", "480P"]
   description: "用于测试质量选择功能"
 
 # 弹幕下载测试
 danmaku:
-  # 有弹幕的视频URL
   url: "https://www.bilibili.com/video/BV16vpizyEpY"
-  format: "ass" # 弹幕格式：ass 或 xml
+  format: "ass"
   description: "用于测试弹幕下载功能"
 
 # 字幕下载测试
 subtitle:
-  # 有字幕的视频URL（如果视频没有字幕，测试会跳过字幕验证）
   url: "https://www.bilibili.com/video/BV16vpizyEpY"
   description: "用于测试字幕下载功能"
 
 # 章节测试
 chapters:
-  # 有章节信息的视频URL（如果视频没有章节，测试会跳过章节验证）
   url: "https://www.bilibili.com/video/BV16vpizyEpY"
   description: "用于测试章节信息提取"
 
 # 认证测试
 auth_required:
-  # 需要认证才能下载的视频URL（如大会员专享内容）
   url: "PLACEHOLDER_AUTH_REQUIRED_URL"
-  use_auth: false # 设置为true时启用认证
-  auth_file: null # 可选：指定认证文件路径，如 "../../auth.toml"
+  use_auth: false
+  auth_file: null
   description: "用于测试认证功能"
 
 # 错误处理测试
 error_handling:
-  # 无效URL
   invalid_url: "https://invalid.example.com/video/123"
-
-  # 不存在的视频
   not_found_url: "BV1xx411c0000"
-
   description: "用于测试错误处理"

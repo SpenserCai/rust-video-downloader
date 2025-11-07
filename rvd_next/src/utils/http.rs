@@ -20,7 +20,7 @@ impl UserAgentGenerator {
     /// Create a new User-Agent generator
     pub fn new() -> Self {
         Self {
-            rng: rand::thread_rng(),
+            rng: rand::rng(),
         }
     }
 
@@ -53,12 +53,12 @@ impl UserAgentGenerator {
             "X11; Linux x86_64",
             "X11; Ubuntu; Linux x86_64",
         ];
-        platforms[self.rng.gen_range(0..platforms.len())]
+        platforms[self.rng.random_range(0..platforms.len())]
     }
 
     /// Get a random browser string
     fn random_browser(&mut self) -> String {
-        let browser_type = self.rng.gen_range(0..4);
+        let browser_type = self.rng.random_range(0..4);
 
         match browser_type {
             0 => self.chrome_ua(),
@@ -70,8 +70,8 @@ impl UserAgentGenerator {
 
     /// Generate Chrome User-Agent
     fn chrome_ua(&mut self) -> String {
-        let version = self.rng.gen_range(100..120);
-        let build = self.rng.gen_range(5000..6000);
+        let version = self.rng.random_range(100..120);
+        let build = self.rng.random_range(5000..6000);
         format!(
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{}.0.{}.0 Safari/537.36",
             version, build
@@ -80,13 +80,13 @@ impl UserAgentGenerator {
 
     /// Generate Firefox User-Agent
     fn firefox_ua(&mut self) -> String {
-        let version = self.rng.gen_range(100..120);
+        let version = self.rng.random_range(100..120);
         format!("Gecko/20100101 Firefox/{}.0", version)
     }
 
     /// Generate Safari User-Agent
     fn safari_ua(&mut self) -> String {
-        let version = self.rng.gen_range(15..17);
+        let version = self.rng.random_range(15..17);
         format!(
             "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{}.0 Safari/605.1.15",
             version
@@ -95,8 +95,8 @@ impl UserAgentGenerator {
 
     /// Generate Edge User-Agent
     fn edge_ua(&mut self) -> String {
-        let version = self.rng.gen_range(100..120);
-        let build = self.rng.gen_range(5000..6000);
+        let version = self.rng.random_range(100..120);
+        let build = self.rng.random_range(5000..6000);
         format!(
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{}.0.{}.0 Safari/537.36 Edg/{}.0.0.0",
             version, build, version
