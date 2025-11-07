@@ -135,6 +135,7 @@ pub async fn parse_batch_videos(
     video_type: VideoType,
     auth: Option<&Auth>,
     wbi_manager: Option<&mut super::wbi::WbiManager>,
+    api_mode: super::ApiMode,
 ) -> Result<BatchResult> {
     match video_type {
         VideoType::FavoriteList(fav_info) => {
@@ -154,10 +155,17 @@ pub async fn parse_batch_videos(
             })
         }
         VideoType::SpaceVideo(mid) => {
-            let wbi = wbi_manager.ok_or_else(|| {
-                DownloaderError::Api("WBI manager required for space video".to_string())
-            })?;
-            let videos = fetch_space_videos(client, &mid, auth, wbi).await?;
+            // TV/APP mode uses different API endpoint (no WBI signature required)
+            let videos = if api_mode == super::ApiMode::TV || api_mode == super::ApiMode::App {
+                fetch_space_videos_app(client, &mid, auth).await?
+            } else {
+                // Web mode uses WBI signature
+                let wbi = wbi_manager.ok_or_else(|| {
+                    DownloaderError::Api("WBI manager required for space video in Web mode".to_string())
+                })?;
+                fetch_space_videos(client, &mid, auth, wbi).await?
+            };
+            
             let count = videos.len();
             Ok(BatchResult {
                 videos,
@@ -218,6 +226,7 @@ pub async fn parse_batch_page(
     client: &Arc<HttpClient>,
     video_type: VideoType,
     continuation: Option<&str>,
+    api_mode: super::ApiMode,
     auth: Option<&Auth>,
     wbi_manager: Option<&mut super::wbi::WbiManager>,
 ) -> Result<BatchResult> {
@@ -226,7 +235,7 @@ pub async fn parse_batch_page(
             "Bilibili batch downloads don't support pagination yet".to_string(),
         ));
     }
-    parse_batch_videos(client, video_type, auth, wbi_manager).await
+    parse_batch_videos(client, video_type, auth, wbi_manager, api_mode).await
 }
 
 async fn fetch_video_info_by_bvid(
@@ -1102,6 +1111,107 @@ pub async fn fetch_space_videos(
                     all_videos.push(video_info);
                 }
             }
+        }
+    }
+
+    Ok(all_videos)
+}
+
+// UP主空间视频获取（APP端，无需WBI签名）
+pub async fn fetch_space_videos_app(
+    client: &Arc<HttpClient>,
+    mid: &str,
+    auth: Option<&Auth>,
+) -> Result<Vec<VideoInfo>> {
+    // 获取用户信息
+    let user_info_api = format!(
+        "https://api.live.bilibili.com/live_user/v1/Master/info?uid={}",
+        mid
+    );
+    let response = client.get(&user_info_api, None).await?;
+    let json_text = response.text().await?;
+
+    let user_response: ApiResponse<UserInfoData> = serde_json::from_str(&json_text)
+        .map_err(|e| DownloaderError::Parse(format!("Failed to parse user info: {}", e)))?;
+
+    let _user_name = user_response
+        .data
+        .map(|d| d.info.uname)
+        .unwrap_or_else(|| format!("User_{}", mid));
+
+    let mut all_videos = Vec::new();
+    let mut last_aid: Option<u64> = None;
+    let page_size = 20; // APP端默认每页20条
+
+    loop {
+        // 构建APP端API URL
+        let mut api = format!(
+            "https://app.biliapi.com/x/v2/space/archive/cursor?vmid={}&ps={}",
+            mid, page_size
+        );
+        
+        if let Some(aid) = last_aid {
+            api.push_str(&format!("&aid={}", aid));
+        }
+
+        let response = client.get_with_auth(&api, auth).await?;
+        let json_text = response.text().await?;
+
+        tracing::debug!("APP space video response: {}", json_text);
+
+        // 解析APP端响应
+        #[derive(Deserialize)]
+        struct AppSpaceResponse {
+            code: i32,
+            message: String,
+            data: Option<AppSpaceData>,
+        }
+
+        #[derive(Deserialize)]
+        struct AppSpaceData {
+            has_next: bool,
+            item: Vec<AppSpaceItem>,
+        }
+
+        #[derive(Deserialize)]
+        struct AppSpaceItem {
+            bvid: String,
+        }
+
+        let api_response: AppSpaceResponse = serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse APP space videos: {}", e)))?;
+
+        if api_response.code != 0 {
+            return Err(DownloaderError::Api(format!(
+                "API error: {}",
+                api_response.message
+            )));
+        }
+
+        let data = api_response
+            .data
+            .ok_or_else(|| DownloaderError::Parse("No space video data".to_string()))?;
+
+        if data.item.is_empty() {
+            break;
+        }
+
+        // 获取每个视频的详细信息
+        for item in &data.item {
+            let video_info = fetch_video_info_by_bvid(client, &item.bvid, auth).await?;
+            all_videos.push(video_info);
+        }
+
+        // 检查是否有下一页
+        if !data.has_next {
+            break;
+        }
+
+        // 更新last_aid为当前页最后一个视频的aid
+        if let Some(last_video) = all_videos.last() {
+            last_aid = Some(last_video.aid);
+        } else {
+            break;
         }
     }
 

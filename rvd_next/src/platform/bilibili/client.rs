@@ -3,10 +3,12 @@
 //! This module provides functions for calling Bilibili APIs.
 
 use super::api::*;
+use super::app_sign::AppSignManager;
 use super::ApiMode;
 use crate::error::{DownloaderError, Result};
 use crate::types::{Auth, Stream, StreamType, Subtitle};
 use crate::utils::http::HttpClient;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Get play URL for a video
@@ -37,18 +39,57 @@ pub async fn get_play_url(
             }
         }
         ApiMode::TV => {
+            // TV mode requires appkey signature
+            let sign_manager = AppSignManager::new_tv();
+            let mut params = HashMap::new();
+            
+            // Add access_key if available
+            if let Some(auth) = auth {
+                if let Some(ref token) = auth.access_token {
+                    params.insert("access_key".to_string(), token.clone());
+                }
+            }
+            
+            params.insert("appkey".to_string(), sign_manager.appkey().to_string());
+            params.insert("build".to_string(), "106500".to_string());
+            params.insert("cid".to_string(), cid.to_string());
+            params.insert("device".to_string(), "android".to_string());
+            
             if is_bangumi {
                 let ep_param = ep_id.unwrap();
-                format!(
-                    "https://api.snm0516.aisee.tv/pgc/player/api/playurltv?avid={}&cid={}&ep_id={}&qn=127&fnval=4048&fnver=0&fourk=1",
-                    video_id, cid, ep_param
-                )
-            } else {
-                format!(
-                    "https://api.snm0516.aisee.tv/x/tv/playurl?avid={}&cid={}&qn=127&fnval=4048&fnver=0&fourk=1",
-                    video_id, cid
-                )
+                params.insert("ep_id".to_string(), ep_param.to_string());
+                params.insert("expire".to_string(), "0".to_string());
             }
+            
+            params.insert("fnval".to_string(), "4048".to_string());
+            params.insert("fnver".to_string(), "0".to_string());
+            params.insert("fourk".to_string(), "1".to_string());
+            params.insert("mid".to_string(), "0".to_string());
+            params.insert("mobi_app".to_string(), "android_tv_yst".to_string());
+            params.insert("object_id".to_string(), video_id.to_string());
+            params.insert("platform".to_string(), "android".to_string());
+            params.insert("playurl_type".to_string(), "1".to_string());
+            params.insert("qn".to_string(), "127".to_string());
+            params.insert("ts".to_string(), sign_manager.get_timestamp().to_string());
+            
+            // Generate signature
+            let sign = sign_manager.sign_params(&params);
+            params.insert("sign".to_string(), sign);
+            
+            // Build query string
+            let query_string = params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect::<Vec<_>>()
+                .join("&");
+            
+            let base_url = if is_bangumi {
+                "https://api.snm0516.aisee.tv/pgc/player/api/playurltv"
+            } else {
+                "https://api.snm0516.aisee.tv/x/tv/playurl"
+            };
+            
+            format!("{}?{}", base_url, query_string)
         }
         ApiMode::App => {
             // APP API 需要特殊的签名，这里使用简化版本

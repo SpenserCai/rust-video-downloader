@@ -114,7 +114,7 @@ impl Platform for BilibiliPlatform {
 
         if super::parser::is_batch_type(&video_type) {
             let mut wbi = self.wbi_manager.lock().await;
-            super::parser::parse_batch_videos(&self.client, video_type, auth, Some(&mut *wbi)).await
+            super::parser::parse_batch_videos(&self.client, video_type, auth, Some(&mut *wbi), self.api_mode).await
         } else {
             // Single video - wrap in BatchResult
             let video = self.parse_video(url, auth).await?;
@@ -134,6 +134,7 @@ impl Platform for BilibiliPlatform {
             &self.client,
             video_type,
             continuation,
+            self.api_mode,
             auth,
             Some(&mut *wbi),
         )

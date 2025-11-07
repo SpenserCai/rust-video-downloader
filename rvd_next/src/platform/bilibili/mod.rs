@@ -8,6 +8,7 @@
 //! - Multiple API modes (Web, TV, APP, International)
 
 pub mod api;
+pub mod app_sign;
 pub mod auth;
 pub mod cdn;
 pub mod client;
