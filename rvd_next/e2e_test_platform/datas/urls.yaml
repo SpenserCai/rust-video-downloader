@@ -88,12 +88,15 @@ bilibili:
       description: "AV 号视频下载（请填入实际 AV 号）"
     multi_page:
       url: "https://www.bilibili.com/bangumi/play/ss46085"
+      quality: "480P"
       description: "多 P 视频下载（请填入实际多 P 视频 URL）"
     bangumi_ep:
       url: "https://www.bilibili.com/bangumi/play/ep781703"
+      quality: "480P"
       description: "番剧 EP 号下载（请填入实际番剧 EP URL）"
     bangumi_ss:
       url: "https://www.bilibili.com/bangumi/play/ss47794"
+      quality: "480P"
       description: "番剧 SS 号下载"
 
   # 批量下载测试
