@@ -15,7 +15,7 @@ core:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       description: "测试 aria2c 外部下载器"
       use_aria2c: true
-  
+
   # 混流器测试
   muxer:
     basic:
@@ -27,7 +27,7 @@ core:
     skip_mux:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       description: "测试跳过混流模式"
-  
+
   # 配置管理测试
   config:
     default:
@@ -37,7 +37,7 @@ core:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       description: "测试自定义配置文件"
       config_file: "./cfg/rvd.toml"
-  
+
   # 输出模板测试
   output_template:
     default:
@@ -47,7 +47,7 @@ core:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       description: "测试自定义输出模板"
       output_template: "{title}_{bvid}"
-  
+
   # HTTP 客户端配置测试
   http_client:
     default_user_agent:
@@ -58,7 +58,7 @@ core:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       description: "测试自定义 User-Agent"
       user_agent: "CustomBot/1.0"
-  
+
   # 临时文件管理测试
   temp_files:
     normal_cleanup:
@@ -67,7 +67,7 @@ core:
     failed_cleanup:
       url: "INVALID_URL"
       description: "测试失败后清理"
-  
+
   # 错误处理测试
   error_handling:
     disk_space:
@@ -95,7 +95,7 @@ bilibili:
     bangumi_ss:
       url: "https://www.bilibili.com/bangumi/play/ss47794"
       description: "番剧 SS 号下载"
-  
+
   # 批量下载测试
   batch_download:
     favorites:
@@ -114,7 +114,7 @@ bilibili:
       url: "PLACEHOLDER_SERIES_URL"
       description: "系列批量下载（请填入实际系列 URL）"
       batch_limit: 5
-  
+
   # 质量选择测试
   quality_selection:
     quality_priority:
@@ -126,11 +126,11 @@ bilibili:
       codec: "hevc"
       description: "编码优先级测试"
     dolby_vision:
-      url: "PLACEHOLDER_DOLBY_VISION_URL"
+      url: "https://www.bilibili.com/video/BV1aGndz5Ee4"
       quality: "杜比视界"
       description: "杜比视界质量测试（需要大会员）"
       auth_file: "./cfg/auth.toml"
-  
+
   # 音频格式测试
   audio_formats:
     m4a:
@@ -144,7 +144,7 @@ bilibili:
       url: "PLACEHOLDER_FLAC_URL"
       description: "FLAC 无损音频测试（需要大会员）"
       auth_file: "./cfg/auth.toml"
-  
+
   # API 模式测试
   api_modes:
     web_api:
@@ -160,7 +160,7 @@ bilibili:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       api_mode: "app"
       description: "APP API 模式测试"
-  
+
   # 弹幕测试
   danmaku:
     xml_format:
@@ -171,7 +171,7 @@ bilibili:
       url: "https://www.bilibili.com/video/BV16vpizyEpY"
       format: "ass"
       description: "ASS 弹幕下载"
-  
+
   # 字幕测试
   subtitle:
     single_subtitle:
@@ -180,7 +180,7 @@ bilibili:
     multi_subtitle:
       url: "PLACEHOLDER_MULTI_SUBTITLE_URL"
       description: "多语言字幕下载（请填入有多语言字幕的视频 URL）"
-  
+
   # 章节测试
   chapters:
     with_chapters:
@@ -189,7 +189,7 @@ bilibili:
     bangumi_chapters:
       url: "PLACEHOLDER_BANGUMI_CHAPTERS_URL"
       description: "番剧章节测试（请填入番剧 URL）"
-  
+
   # CDN 优化测试
   cdn_optimization:
     pcdn_url:
@@ -198,7 +198,7 @@ bilibili:
     cmcc_cdn:
       url: "PLACEHOLDER_CMCC_URL"
       description: "CMCC CDN 测试（请填入 CMCC CDN URL）"
-  
+
   # 认证功能测试
   authentication:
     cookie_auth:
@@ -209,7 +209,7 @@ bilibili:
       url: "PLACEHOLDER_VIP_URL"
       description: "Token 认证测试（需要大会员内容）"
       auth_file: "./cfg/auth.toml"
-  
+
   # 信息查询测试
   info_query:
     basic_info:
@@ -220,7 +220,7 @@ bilibili:
       url: "https://www.bilibili.com/bangumi/play/ss47794"
       description: "批量信息查询"
       info_only: true
-  
+
   # URL 解析测试
   url_parsing:
     bv_formats:
@@ -234,7 +234,7 @@ bilibili:
         - "https://space.bilibili.com/102647921"
         - "PLACEHOLDER_MEDIA_LIST_URL"
       description: "批量 URL 格式解析"
-  
+
   # WBI 签名验证测试
   wbi_signature:
     space_info:
@@ -245,7 +245,7 @@ bilibili:
       url: "https://space.bilibili.com/102647921"
       description: "测试 WBI 签名（实际下载）"
       batch_limit: 3
-  
+
   # Cheese 课程测试
   cheese:
     course_ep:
@@ -254,7 +254,7 @@ bilibili:
     course_ss:
       url: "PLACEHOLDER_CHEESE_SS_URL"
       description: "Cheese 课程 SS 下载（如 https://www.bilibili.com/cheese/play/ss123456）"
-  
+
   # 短链接解析测试
   short_url:
     video_short:
