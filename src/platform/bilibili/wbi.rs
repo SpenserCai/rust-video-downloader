@@ -57,13 +57,12 @@ impl WbiManager {
             .map_err(|e| DownloaderError::Parse(format!("Failed to parse nav response: {}", e)))?;
 
         // 即使未登录（code=-101），wbi_img数据仍然存在
-        let data = nav_response
-            .data
-            .ok_or_else(|| DownloaderError::Api(format!(
+        let data = nav_response.data.ok_or_else(|| {
+            DownloaderError::Api(format!(
                 "No nav data (code: {}, message: {})",
-                nav_response.code,
-                nav_response.message
-            )))?;
+                nav_response.code, nav_response.message
+            ))
+        })?;
 
         // 提取文件名
         let img_key = extract_filename(&data.wbi_img.img_url);
@@ -135,8 +134,8 @@ fn extract_filename(url: &str) -> String {
 fn get_mixin_key(orig: &str) -> String {
     // B站的固定混淆表
     const MIXIN_KEY_ENC_TAB: [usize; 32] = [
-        46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42,
-        19, 29, 28, 14, 39, 12, 38, 41, 13,
+        46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49, 33, 9, 42, 19,
+        29, 28, 14, 39, 12, 38, 41, 13,
     ];
 
     let orig_chars: Vec<char> = orig.chars().collect();
@@ -158,16 +157,10 @@ mod tests {
     #[test]
     fn test_extract_filename() {
         let url = "https://i0.hdslb.com/bfs/wbi/7cd084941338484aae1ad9425b84077c.png";
-        assert_eq!(
-            extract_filename(url),
-            "7cd084941338484aae1ad9425b84077c"
-        );
+        assert_eq!(extract_filename(url), "7cd084941338484aae1ad9425b84077c");
 
         let url2 = "https://i0.hdslb.com/bfs/wbi/4932caff0ff746eab6f01bf08b70ac45.png";
-        assert_eq!(
-            extract_filename(url2),
-            "4932caff0ff746eab6f01bf08b70ac45"
-        );
+        assert_eq!(extract_filename(url2), "4932caff0ff746eab6f01bf08b70ac45");
     }
 
     #[test]

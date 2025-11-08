@@ -114,7 +114,8 @@ impl Muxer {
         output: &Path,
         subtitles: &[PathBuf],
     ) -> Result<()> {
-        self.mux_with_chapters(video, audio, output, subtitles, &[]).await
+        self.mux_with_chapters(video, audio, output, subtitles, &[])
+            .await
     }
 
     pub async fn mux_with_chapters(
@@ -125,7 +126,8 @@ impl Muxer {
         subtitles: &[PathBuf],
         chapters: &[crate::types::Chapter],
     ) -> Result<()> {
-        self.mux_with_options(video, audio, output, subtitles, chapters, false).await
+        self.mux_with_options(video, audio, output, subtitles, chapters, false)
+            .await
     }
 
     pub async fn mux_with_options(
@@ -140,7 +142,8 @@ impl Muxer {
         tracing::info!("Muxing video and audio to {:?}", output);
 
         // 检查是否需要使用mp4box处理杜比视界
-        let should_use_mp4box = self.use_mp4box || (is_dolby_vision && !self.supports_dolby_vision());
+        let should_use_mp4box =
+            self.use_mp4box || (is_dolby_vision && !self.supports_dolby_vision());
 
         if should_use_mp4box && is_dolby_vision && !self.supports_dolby_vision() {
             tracing::warn!(
@@ -180,7 +183,8 @@ impl Muxer {
         // 添加章节元数据
         if let Some(ref chapter_path) = chapter_file {
             cmd.arg("-i").arg(chapter_path);
-            cmd.arg("-map_metadata").arg(format!("{}", 2 + subtitles.len()));
+            cmd.arg("-map_metadata")
+                .arg(format!("{}", 2 + subtitles.len()));
         }
 
         // Overwrite output file
@@ -223,8 +227,7 @@ impl Muxer {
             content.push_str(&format!("title={}\n", chapter.title));
         }
 
-        std::fs::write(path, content)
-            .map_err(DownloaderError::Io)?;
+        std::fs::write(path, content).map_err(DownloaderError::Io)?;
 
         Ok(())
     }

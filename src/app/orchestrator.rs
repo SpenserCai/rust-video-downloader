@@ -1,3 +1,10 @@
+//! Orchestrator - coordinates the download process
+//!
+//! The orchestrator is responsible for coordinating all components to complete
+//! the download workflow. It manages the platform registry, selects the appropriate
+//! platform for each URL, and orchestrates the download process.
+
+use crate::app::registry::PlatformRegistry;
 use crate::cli::Cli;
 use crate::core::danmaku;
 use crate::core::downloader::Downloader;
@@ -5,11 +12,9 @@ use crate::core::muxer::Muxer;
 use crate::core::progress::ProgressTracker;
 use crate::core::subtitle;
 use crate::error::{DownloaderError, Result};
-use crate::platform::bilibili::parser;
-use crate::platform::bilibili::selector::select_best_streams;
-use crate::platform::bilibili::BilibiliPlatform;
-use crate::platform::Platform;
-use crate::types::{Auth, Page, Stream, StreamPreferences, StreamType, VideoInfo};
+
+use crate::platform::{Platform, PlatformFeature};
+use crate::types::{Auth, BatchType, Page, Stream, StreamPreferences, StreamType, VideoInfo};
 use crate::utils::config::Config;
 use crate::utils::file;
 use crate::utils::http::HttpClient;
@@ -17,30 +22,110 @@ use dialoguer::Select;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+/// Orchestrator - coordinates the download process
+///
+/// The orchestrator manages the entire download workflow:
+/// - Platform selection via registry
+/// - Video information extraction
+/// - Stream selection and downloading
+/// - Muxing and post-processing
+/// - Batch download with streaming pagination
 pub struct Orchestrator {
-    platforms: Vec<Box<dyn Platform>>,
+    /// Platform registry for managing all registered platforms
+    registry: PlatformRegistry,
+    /// Downloader for fetching video/audio streams
     downloader: Arc<Downloader>,
+    /// Muxer for combining video and audio
     muxer: Arc<Muxer>,
+    /// Progress tracker for download progress
     progress: Arc<ProgressTracker>,
+    /// Configuration
     config: Config,
+    /// HTTP client
     http_client: Arc<HttpClient>,
+    /// Override authentication (set via login command)
     override_auth: Option<Auth>,
 }
 
 impl Orchestrator {
+    /// Create a new orchestrator
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - Configuration
+    /// * `cli` - CLI arguments
+    ///
+    /// # Returns
+    ///
+    /// A new orchestrator instance
     pub fn new(config: Config, cli: &Cli) -> Result<Self> {
-        let http_client = Arc::new(HttpClient::new()?);
-        
+        // Create HTTP client with custom User-Agent if specified
+        // Priority: CLI > Config > Random (default)
+        let http_client = if let Some(ref ua) = cli.user_agent {
+            Arc::new(HttpClient::with_custom_user_agent(ua.clone())?)
+        } else if let Some(ref http_config) = config.http {
+            if let Some(ref ua) = http_config.user_agent {
+                if !ua.is_empty() {
+                    Arc::new(HttpClient::with_custom_user_agent(ua.clone())?)
+                } else {
+                    Arc::new(HttpClient::new()?)
+                }
+            } else {
+                Arc::new(HttpClient::new()?)
+            }
+        } else {
+            Arc::new(HttpClient::new()?)
+        };
+
+        // Log User-Agent if requested in config
+        if let Some(ref http_config) = config.http {
+            if http_config.log_user_agent {
+                tracing::info!("Using User-Agent: {}", http_client.user_agent());
+            }
+        }
+
+        // Create platform registry
+        let mut registry = PlatformRegistry::new();
+
+        // Register Bilibili platform
+        let api_mode = cli.get_api_mode();
+        let mut bilibili = crate::platform::bilibili::BilibiliPlatform::new(api_mode)?;
+
+        // Configure CDN optimizer if specified in config
+        if let Some(ref platforms) = config.platforms {
+            if let Some(ref bilibili_config) = platforms.bilibili {
+                if let Some(ref cdn_config) = bilibili_config.cdn {
+                    if let Some(ref backup_hosts) = cdn_config.backup_hosts {
+                        if !backup_hosts.is_empty() {
+                            tracing::debug!(
+                                "Configuring Bilibili CDN with backup hosts: {:?}",
+                                backup_hosts
+                            );
+                            bilibili = bilibili.with_cdn_config(backup_hosts.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        registry.register(Arc::new(bilibili));
+
+        // Future: Register more platforms here
+        // let youtube = Arc::new(crate::platform::youtube::YouTubePlatform::new()?);
+        // registry.register(youtube);
+
+        tracing::info!("Registered {} platform(s)", registry.count());
+
         // Configure downloader with aria2c settings
         let mut downloader = Downloader::new(http_client.clone(), cli.threads);
-        
+
         // Determine download method from CLI or config
-        let use_aria2c = cli.use_aria2c 
-            || config.aria2c.as_ref().map(|a| a.enabled).unwrap_or(false);
-        
+        let use_aria2c =
+            cli.use_aria2c || config.aria2c.as_ref().map(|a| a.enabled).unwrap_or(false);
+
         if use_aria2c {
             downloader = downloader.with_method(crate::core::downloader::DownloadMethod::Aria2c);
-            
+
             // Set aria2c path from CLI or config
             if let Some(ref path) = cli.aria2c_path {
                 downloader = downloader.with_aria2c_path(path.clone());
@@ -49,7 +134,7 @@ impl Orchestrator {
                     downloader = downloader.with_aria2c_path(path.clone());
                 }
             }
-            
+
             // Set custom aria2c args from CLI or config
             if let Some(ref args) = cli.aria2c_args {
                 downloader = downloader.with_aria2c_args(args.clone());
@@ -58,29 +143,22 @@ impl Orchestrator {
                     downloader = downloader.with_aria2c_args(args.clone());
                 }
             }
-            
+
             tracing::info!("aria2c download mode enabled");
         }
-        
+
         let downloader = Arc::new(downloader);
-        
-        let muxer =
-            Arc::new(Muxer::new_with_options(
-                cli.ffmpeg_path.clone().or_else(|| {
-                    config.paths.as_ref().and_then(|p| p.ffmpeg.clone())
-                }),
-                cli.use_mp4box,
-            )?);
+
+        let muxer = Arc::new(Muxer::new_with_options(
+            cli.ffmpeg_path
+                .clone()
+                .or_else(|| config.paths.as_ref().and_then(|p| p.ffmpeg.clone())),
+            cli.use_mp4box,
+        )?);
         let progress = Arc::new(ProgressTracker::new());
 
-        // 根据CLI参数选择API模式
-        let api_mode = cli.get_api_mode();
-        let platforms: Vec<Box<dyn Platform>> = vec![
-            Box::new(BilibiliPlatform::with_api_mode(api_mode)?)
-        ];
-
         Ok(Self {
-            platforms,
+            registry,
             downloader,
             muxer,
             progress,
@@ -95,96 +173,225 @@ impl Orchestrator {
         self.override_auth = auth;
     }
 
-    fn select_platform(&self, url: &str) -> Result<&dyn Platform> {
-        for platform in &self.platforms {
-            if platform.can_handle(url) {
-                return Ok(platform.as_ref());
-            }
-        }
-
-        Err(DownloaderError::UnsupportedPlatform(url.to_string()))
-    }
-
-    fn is_batch_url(&self, url: &str) -> bool {
-        // Check if URL is a batch download type (favorites, space, medialist, series)
-        url.contains("favlist") 
-            || (url.contains("space.bilibili.com") && !url.contains("/video/"))
-            || url.contains("medialist")
-            || url.contains("seriesdetail")
-    }
-
+    /// Run the download process
+    ///
+    /// This is the main entry point for the orchestrator. It:
+    /// 1. Selects the appropriate platform for the URL
+    /// 2. Determines if it's a batch or single download
+    /// 3. Implements streaming batch download for large collections
+    /// 4. Downloads each video with progress tracking
+    ///
+    /// # Arguments
+    ///
+    /// * `cli` - CLI arguments
+    ///
+    /// # Returns
+    ///
+    /// Ok(()) on success, error otherwise
     pub async fn run(&self, cli: Cli) -> Result<()> {
-        let url = cli.url.as_ref().ok_or_else(|| {
-            DownloaderError::Parse("No URL provided for download".to_string())
-        })?;
-        
+        let url = cli
+            .url
+            .as_ref()
+            .ok_or_else(|| DownloaderError::Parse("No URL provided for download".to_string()))?;
+
         tracing::info!("Starting download for URL: {}", url);
 
-        // Select platform
-        let platform = self.select_platform(url)?;
+        // Use registry to select platform
+        let platform = self.registry.select_platform(url)?;
         tracing::info!("Using platform: {}", platform.name());
 
-        // Build auth
+        // Validate platform-specific CLI arguments
+        platform.validate_cli_args(&cli)?;
+
+        // Display platform capabilities in verbose mode
+        if cli.verbose {
+            let meta = platform.metadata();
+            tracing::debug!("Platform: {} v{}", meta.display_name, meta.version);
+            tracing::debug!("Capabilities: {:?}", meta.capabilities);
+        }
+
         let auth = self.build_auth(&cli);
 
-        // Check if this is a batch download URL (for bilibili)
-        let is_batch = self.is_batch_url(url);
-        
+        // Check if this is a batch URL
+        let is_batch = platform.is_batch_url(url);
+
         if is_batch {
-            // Handle batch download
-            if let Some(bilibili) = platform.as_any().downcast_ref::<BilibiliPlatform>() {
-                let videos = bilibili.parse_video_batch(url, auth.as_ref()).await?;
-                
-                if videos.is_empty() {
-                    return Err(DownloaderError::Parse("No videos found in batch".to_string()));
+            tracing::info!("Detected batch URL, using streaming batch download");
+            self.run_batch_download(url, &cli, platform.as_ref(), auth.as_ref())
+                .await?;
+        } else {
+            tracing::info!("Single video download");
+            self.run_single_download(url, &cli, platform.as_ref(), auth.as_ref())
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Run batch download with streaming pagination
+    ///
+    /// This method implements streaming batch download to avoid loading all videos
+    /// into memory at once. It fetches videos page by page and processes them immediately.
+    async fn run_batch_download(
+        &self,
+        url: &str,
+        cli: &Cli,
+        platform: &dyn Platform,
+        auth: Option<&Auth>,
+    ) -> Result<()> {
+        let mut all_videos = Vec::new();
+        let mut continuation: Option<String> = None;
+        let mut page_num = 1;
+        let mut _batch_type: Option<BatchType> = None;
+        let mut _total_count: Option<usize> = None;
+
+        // Streaming pagination loop
+        loop {
+            let batch_result = if let Some(ref cont) = continuation {
+                tracing::debug!("Fetching page {} with continuation: {}", page_num, cont);
+                platform.parse_batch_page(url, Some(cont), auth).await?
+            } else {
+                tracing::debug!("Fetching first page");
+                platform.parse_batch(url, auth).await?
+            };
+
+            let video_count = batch_result.videos.len();
+
+            // Display batch type on first page
+            if page_num == 1 {
+                _batch_type = batch_result.batch_type;
+                _total_count = batch_result.total_count;
+
+                if let Some(bt) = _batch_type {
+                    let type_name = match bt {
+                        BatchType::Favorites => "收藏夹",
+                        BatchType::UserVideos => "UP主空间",
+                        BatchType::Series => "系列",
+                        BatchType::Season => "番剧",
+                        BatchType::Collection => "合集",
+                        BatchType::Playlist => "播放列表",
+                        BatchType::Custom => "批量",
+                    };
+                    println!("📦 {}下载", type_name);
                 }
-                
-                println!("\n📦 Batch download: {} video(s) found", videos.len());
-                
-                if cli.info_only {
-                    for (idx, video) in videos.iter().enumerate() {
-                        println!("\n[{}/{}]", idx + 1, videos.len());
-                        self.display_video_info(video);
-                    }
-                    return Ok(());
+
+                if let Some(total) = _total_count {
+                    println!("📊 总计: {} 个视频", total);
                 }
-                
-                // Build stream preferences
-                let preferences = StreamPreferences {
-                    quality_priority: cli.parse_quality_priority(),
-                    codec_priority: cli.parse_codec_priority(),
-                };
-                
-                // Download each video in the batch
-                for (idx, video_info) in videos.iter().enumerate() {
-                    println!("\n[{}/{}] Processing: {}", idx + 1, videos.len(), video_info.title);
-                    
-                    // Determine which pages to download
-                    let pages_to_download = self.select_pages(video_info, &cli)?;
-                    
-                    // Download each page
-                    for page in pages_to_download {
-                        self.process_page(
-                            video_info,
-                            &page,
-                            &preferences,
-                            &cli,
-                            platform,
-                            auth.as_ref(),
-                        )
-                        .await?;
-                    }
+            }
+
+            // Display pagination info
+            if let Some(ref page_info) = batch_result.page_info {
+                if let Some(total_pages) = page_info.total_pages {
+                    println!(
+                        "📄 正在获取第{}/{}页 ({} 个视频)",
+                        page_info.current_page, total_pages, video_count
+                    );
+                } else {
+                    println!(
+                        "📄 正在获取第{}页 ({} 个视频)",
+                        page_info.current_page, video_count
+                    );
                 }
-                
-                self.progress.finish_all();
-                println!("\n✓ All {} video(s) downloaded successfully!", videos.len());
-                
-                return Ok(());
+            } else if page_num > 1 {
+                println!("📄 正在获取第{}页 ({} 个视频)", page_num, video_count);
+            }
+
+            all_videos.extend(batch_result.videos);
+
+            if !batch_result.has_more {
+                break;
+            }
+
+            continuation = batch_result.continuation;
+            page_num += 1;
+
+            // Safety check: prevent infinite loops
+            if page_num > 1000 {
+                tracing::warn!("Reached maximum page limit (1000), stopping");
+                break;
             }
         }
 
-        // Single video download (original logic)
-        let video_info = platform.parse_video(url, auth.as_ref()).await?;
+        if all_videos.is_empty() {
+            return Err(DownloaderError::Parse(
+                "No videos found in batch".to_string(),
+            ));
+        }
+
+        println!("\n✓ 共找到 {} 个视频", all_videos.len());
+
+        // Check batch limit (safety limit - will error if exceeded)
+        if let Some(limit) = cli.batch_limit {
+            if all_videos.len() > limit {
+                return Err(DownloaderError::BatchLimitExceeded {
+                    requested: all_videos.len(),
+                    max: limit,
+                });
+            }
+        }
+
+        // Apply max_videos limit (will truncate to first N videos)
+        if let Some(max) = cli.max_videos {
+            if all_videos.len() > max {
+                println!("⚠️  限制下载数量: 找到 {} 个视频，将只下载前 {} 个", all_videos.len(), max);
+                all_videos.truncate(max);
+            }
+        }
+
+        if cli.info_only {
+            for (idx, video) in all_videos.iter().enumerate() {
+                if all_videos.len() > 1 {
+                    println!("\n[{}/{}]", idx + 1, all_videos.len());
+                }
+                self.display_video_info(video);
+            }
+            return Ok(());
+        }
+
+        // Build stream preferences
+        let preferences = StreamPreferences {
+            quality_priority: cli.parse_quality_priority(),
+            codec_priority: cli.parse_codec_priority(),
+        };
+
+        // Download each video
+        for (idx, video_info) in all_videos.iter().enumerate() {
+            if all_videos.len() > 1 {
+                println!(
+                    "\n[{}/{}] Processing: {}",
+                    idx + 1,
+                    all_videos.len(),
+                    video_info.title
+                );
+            }
+
+            let pages_to_download = self.select_pages(video_info, cli)?;
+
+            for page in pages_to_download {
+                self.process_page(video_info, &page, &preferences, cli, platform, auth)
+                    .await?;
+            }
+        }
+
+        self.progress.finish_all();
+        println!(
+            "\n✓ All {} video(s) downloaded successfully!",
+            all_videos.len()
+        );
+
+        Ok(())
+    }
+
+    /// Run single video download
+    async fn run_single_download(
+        &self,
+        url: &str,
+        cli: &Cli,
+        platform: &dyn Platform,
+        auth: Option<&Auth>,
+    ) -> Result<()> {
+        let video_info = platform.parse_video(url, auth).await?;
 
         // Display video info
         self.display_video_info(&video_info);
@@ -194,7 +401,7 @@ impl Orchestrator {
         }
 
         // Determine which pages to download
-        let pages_to_download = self.select_pages(&video_info, &cli)?;
+        let pages_to_download = self.select_pages(&video_info, cli)?;
 
         tracing::info!("Will download {} page(s)", pages_to_download.len());
 
@@ -206,15 +413,8 @@ impl Orchestrator {
 
         // Download each page
         for page in pages_to_download {
-            self.process_page(
-                &video_info,
-                &page,
-                &preferences,
-                &cli,
-                platform,
-                auth.as_ref(),
-            )
-            .await?;
+            self.process_page(&video_info, &page, &preferences, cli, platform, auth)
+                .await?;
         }
 
         self.progress.finish_all();
@@ -223,14 +423,15 @@ impl Orchestrator {
         Ok(())
     }
 
+    /// Build authentication from various sources
+    ///
+    /// Priority: override_auth (from login) > CLI parameters > auth.toml > config.toml
     fn build_auth(&self, cli: &Cli) -> Option<Auth> {
-        // Priority: override_auth (from login) > CLI parameters > auth.toml > config.toml
-        
         // If we have override auth from login, use it directly
         if self.override_auth.is_some() {
             return self.override_auth.clone();
         }
-        
+
         // Try to load from auth.toml if config file is specified
         let auth_from_file = if let Some(ref config_path) = cli.config_file {
             use crate::auth::storage::CredentialStorage;
@@ -253,25 +454,32 @@ impl Orchestrator {
             .access_token
             .clone()
             .or_else(|| auth_from_file.as_ref().and_then(|a| a.access_token.clone()))
-            .or_else(|| self.config.auth.as_ref().and_then(|a| a.access_token.clone()));
+            .or_else(|| {
+                self.config
+                    .auth
+                    .as_ref()
+                    .and_then(|a| a.access_token.clone())
+            });
 
         if cookie.is_some() || access_token.is_some() {
             Some(Auth {
                 cookie,
                 access_token,
+                extra: std::collections::HashMap::new(),
             })
         } else {
             None
         }
     }
 
+    /// Display video information
     fn display_video_info(&self, video_info: &VideoInfo) {
         println!("\n📹 Video Information:");
         println!("  Title: {}", video_info.title);
         println!("  Uploader: {}", video_info.uploader);
         println!("  Pages: {}", video_info.pages.len());
         if !video_info.description.is_empty() {
-            // 安全地截断字符串，考虑 UTF-8 字符边界
+            // Safely truncate string considering UTF-8 character boundaries
             let desc = if video_info.description.chars().count() > 100 {
                 let truncated: String = video_info.description.chars().take(100).collect();
                 format!("{}...", truncated)
@@ -283,6 +491,7 @@ impl Orchestrator {
         println!();
     }
 
+    /// Select pages to download based on CLI arguments
     fn select_pages(&self, video_info: &VideoInfo, cli: &Cli) -> Result<Vec<Page>> {
         if let Some(page_numbers) = cli.parse_pages() {
             // Filter pages by user selection
@@ -308,6 +517,7 @@ impl Orchestrator {
         }
     }
 
+    /// Interactive stream selection
     fn interactive_select_streams(&self, streams: &[Stream]) -> Result<(Stream, Stream)> {
         let video_streams: Vec<&Stream> = streams
             .iter()
@@ -366,6 +576,15 @@ impl Orchestrator {
         Ok((selected_video, selected_audio))
     }
 
+    /// Process a single page (download and mux)
+    ///
+    /// This method:
+    /// 1. Creates a StreamContext with platform-specific parameters
+    /// 2. Gets available streams using the Platform trait
+    /// 3. Checks platform feature support before downloading subtitles/danmaku
+    /// 4. Downloads video, audio, subtitles, cover, and danmaku
+    /// 5. Muxes everything together
+    #[allow(clippy::too_many_arguments)]
     async fn process_page(
         &self,
         video_info: &VideoInfo,
@@ -377,56 +596,29 @@ impl Orchestrator {
     ) -> Result<()> {
         println!("\n📥 Downloading: P{} - {}", page.number, page.title);
 
-        // Get chapters early (before downloading)
-        let chapters = match parser::fetch_chapters(
-            &self.http_client,
-            &video_info.aid.to_string(),
-            &page.cid,
-        )
-        .await
-        {
-            Ok(chapters) => {
-                if !chapters.is_empty() {
-                    tracing::debug!("Found {} chapter(s)", chapters.len());
-                }
-                chapters
-            }
-            Err(e) => {
-                tracing::debug!("Failed to fetch chapters: {}", e);
-                Vec::new()
-            }
-        };
+        // Create StreamContext using the convenient method
+        let context = page.to_stream_context(&video_info.aid.to_string());
 
-        // Get streams (use aid for bilibili API)
-        let streams = if video_info.is_bangumi {
-            // 番剧需要使用特殊的API
-            if let Some(platform_bilibili) = platform.as_any().downcast_ref::<crate::platform::bilibili::BilibiliPlatform>() {
-                if let Some(ref ep_id) = page.ep_id {
-                    // 使用page的ep_id（每个episode有自己的ep_id）
-                    platform_bilibili
-                        .get_bangumi_streams(&video_info.aid.to_string(), &page.cid, ep_id, auth)
-                        .await?
-                } else if let Some(ref ep_id) = video_info.ep_id {
-                    // 如果page没有ep_id，使用video_info的ep_id
-                    platform_bilibili
-                        .get_bangumi_streams(&video_info.aid.to_string(), &page.cid, ep_id, auth)
-                        .await?
-                } else {
-                    // 如果都没有ep_id，尝试使用普通API
-                    platform
-                        .get_streams(&video_info.aid.to_string(), &page.cid, auth)
-                        .await?
+        // Get chapters early (before downloading)
+        let chapters = if platform.supports_feature(PlatformFeature::Chapters) {
+            match platform.get_chapters(&context).await {
+                Ok(chapters) => {
+                    if !chapters.is_empty() {
+                        tracing::debug!("Found {} chapter(s)", chapters.len());
+                    }
+                    chapters
                 }
-            } else {
-                platform
-                    .get_streams(&video_info.aid.to_string(), &page.cid, auth)
-                    .await?
+                Err(e) => {
+                    tracing::debug!("Failed to fetch chapters: {}", e);
+                    Vec::new()
+                }
             }
         } else {
-            platform
-                .get_streams(&video_info.aid.to_string(), &page.cid, auth)
-                .await?
+            Vec::new()
         };
+
+        // Get streams using Platform trait
+        let streams = platform.get_streams(&context, auth).await?;
 
         if streams.is_empty() {
             return Err(DownloaderError::DownloadFailed(
@@ -438,7 +630,7 @@ impl Orchestrator {
         let (video_stream, audio_stream) = if cli.interactive {
             self.interactive_select_streams(&streams)?
         } else {
-            select_best_streams(&streams, preferences)?
+            platform.select_best_streams(&streams, preferences)?
         };
 
         // Create temp directory
@@ -446,8 +638,8 @@ impl Orchestrator {
 
         // Create a downloader with auth for this download session
         let downloader_with_auth = if auth.is_some() {
-            // Clone the Arc to get the inner Downloader, then create a new one with auth
-            let mut new_downloader = Downloader::new(self.http_client.clone(), self.downloader.thread_count);
+            let mut new_downloader =
+                Downloader::new(self.http_client.clone(), self.downloader.thread_count);
             new_downloader = new_downloader
                 .with_method(self.downloader.method)
                 .with_aria2c_path(self.downloader.aria2c_path.clone())
@@ -460,11 +652,43 @@ impl Orchestrator {
             self.downloader.clone()
         };
 
+        // Optimize download URLs (platform-specific CDN optimization)
+        let optimized_video_url = platform.optimize_download_url(&video_stream.url);
+        let optimized_audio_url = platform.optimize_download_url(&audio_stream.url);
+
+        // Check if streams require special download mode (e.g., CMCC CDN single-threaded)
+        let video_disable_multithread = video_stream
+            .extra_data
+            .as_ref()
+            .and_then(|d| d.get("disable_multithread"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let audio_disable_multithread = audio_stream
+            .extra_data
+            .as_ref()
+            .and_then(|d| d.get("disable_multithread"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        if video_disable_multithread || audio_disable_multithread {
+            tracing::info!("Platform requested single-threaded download mode");
+        }
+
+        // Get platform-specific download headers
+        let video_headers = platform.customize_download_headers(&optimized_video_url);
+        let audio_headers = platform.customize_download_headers(&optimized_audio_url);
+
         // Download video
         let video_path = temp_dir.join("video.m4s");
         let video_pb = self.progress.create_bar("Video", 0);
         downloader_with_auth
-            .download(&video_stream.url, &video_path, Some(video_pb.clone()))
+            .download(
+                &optimized_video_url,
+                &video_path,
+                video_headers,
+                Some(video_pb.clone()),
+            )
             .await?;
         self.progress.finish("Video", "✓ Video downloaded");
 
@@ -472,25 +696,28 @@ impl Orchestrator {
         let audio_path = temp_dir.join("audio.m4s");
         let audio_pb = self.progress.create_bar("Audio", 0);
         downloader_with_auth
-            .download(&audio_stream.url, &audio_path, Some(audio_pb.clone()))
+            .download(
+                &optimized_audio_url,
+                &audio_path,
+                audio_headers,
+                Some(audio_pb.clone()),
+            )
             .await?;
         self.progress.finish("Audio", "✓ Audio downloaded");
 
-        // Download subtitles
+        // Download subtitles (check platform support)
         let mut subtitle_paths = Vec::new();
-        if !cli.skip_subtitle {
-            if let Ok(subtitles) = platform
-                .get_subtitles(&video_info.aid.to_string(), &page.cid)
-                .await
-            {
+        if !cli.skip_subtitle && platform.supports_feature(PlatformFeature::Subtitles) {
+            if let Ok(subtitles) = platform.get_subtitles(&context).await {
                 for (i, subtitle) in subtitles.iter().enumerate() {
                     let subtitle_path = temp_dir.join(format!("subtitle_{}.srt", i));
-                    if let Ok(()) = subtitle::download_and_convert_subtitle(
+                    if subtitle::download_and_convert_subtitle(
                         &self.http_client,
                         subtitle,
                         &subtitle_path,
                     )
                     .await
+                    .is_ok()
                     {
                         subtitle_paths.push(subtitle_path);
                         println!("  ✓ Subtitle downloaded: {}", subtitle.language);
@@ -499,43 +726,43 @@ impl Orchestrator {
             }
         }
 
-        // Download danmaku
-        let danmaku_temp_path = if cli.download_danmaku {
-            let danmaku_format = cli.get_danmaku_format();
-            let danmaku_ext = match danmaku_format {
-                danmaku::DanmakuFormat::Xml => "xml",
-                danmaku::DanmakuFormat::Ass => "ass",
+        // Download danmaku (check platform support)
+        let danmaku_temp_path =
+            if cli.download_danmaku && platform.supports_feature(PlatformFeature::Danmaku) {
+                let danmaku_format = cli.get_danmaku_format();
+                let danmaku_ext = match danmaku_format {
+                    danmaku::DanmakuFormat::Xml => "xml",
+                    danmaku::DanmakuFormat::Ass => "ass",
+                };
+                let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
+
+                match platform.get_danmaku(&context, danmaku_format).await {
+                    Ok(Some(content)) => {
+                        tokio::fs::write(&danmaku_path, content).await?;
+                        println!("  ✓ Danmaku downloaded");
+                        Some(danmaku_path)
+                    }
+                    Ok(None) => {
+                        tracing::debug!("No danmaku available");
+                        None
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to download danmaku: {}", e);
+                        None
+                    }
+                }
+            } else {
+                None
             };
-            let danmaku_path = temp_dir.join(format!("danmaku.{}", danmaku_ext));
-            
-            match danmaku::download_danmaku(
-                &self.http_client,
-                &page.cid,
-                &danmaku_path,
-                danmaku_format,
-            )
-            .await
-            {
-                Ok(()) => {
-                    println!("  ✓ Danmaku downloaded");
-                    Some(danmaku_path)
-                }
-                Err(e) => {
-                    tracing::warn!("Failed to download danmaku: {}", e);
-                    None
-                }
-            }
-        } else {
-            None
-        };
 
         // Download cover
         let _cover_path = if !cli.skip_cover {
             let cover_url = platform.get_cover(video_info);
+            let cover_headers = platform.customize_download_headers(&cover_url);
             let cover_path = temp_dir.join("cover.jpg");
             if self
                 .downloader
-                .download(&cover_url, &cover_path, None)
+                .download(&cover_url, &cover_path, cover_headers, None)
                 .await
                 .is_ok()
             {
@@ -558,11 +785,15 @@ impl Orchestrator {
                 &video_stream.codec,
             );
             let path = PathBuf::from(&parsed);
-            
+
             // If the path is a directory or doesn't have an extension, add a filename
             if path.is_dir() || path.extension().is_none() {
                 let filename = if video_info.pages.len() > 1 {
-                    format!("P{:02}_{}.mp4", page.number, file::sanitize_filename(&page.title))
+                    format!(
+                        "P{:02}_{}.mp4",
+                        page.number,
+                        file::sanitize_filename(&page.title)
+                    )
                 } else {
                     format!("{}.mp4", file::sanitize_filename(&video_info.title))
                 };
@@ -588,17 +819,24 @@ impl Orchestrator {
             tokio::fs::copy(&audio_path, &audio_out).await?;
             println!("  ✓ Files saved (muxing skipped)");
         } else {
-            // 检测是否是杜比视界 (quality_id 126)
+            // Detect Dolby Vision (quality_id 126)
             let is_dolby_vision = video_stream.quality_id == 126;
-            
+
             if is_dolby_vision {
                 tracing::info!("检测到杜比视界清晰度");
             }
-            
+
             // Mux video and audio with chapters
             println!("  🔄 Muxing...");
             self.muxer
-                .mux_with_options(&video_path, &audio_path, &output_path, &subtitle_paths, &chapters, is_dolby_vision)
+                .mux_with_options(
+                    &video_path,
+                    &audio_path,
+                    &output_path,
+                    &subtitle_paths,
+                    &chapters,
+                    is_dolby_vision,
+                )
                 .await?;
             println!("  ✓ Muxed to: {}", output_path.display());
         }
@@ -611,7 +849,7 @@ impl Orchestrator {
                     .and_then(|e| e.to_str())
                     .unwrap_or("xml");
                 let danmaku_output_path = output_path.with_extension(danmaku_ext);
-                
+
                 tokio::fs::copy(&danmaku_temp_path, &danmaku_output_path).await?;
                 println!("  ✓ Danmaku saved to: {}", danmaku_output_path.display());
             }

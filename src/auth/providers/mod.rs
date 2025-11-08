@@ -39,8 +39,7 @@ impl AppSignManager {
     /// 返回MD5签名字符串（小写十六进制）
     pub fn sign_params(&self, params: &HashMap<String, String>) -> String {
         // 1. 按key排序（使用BTreeMap自动排序）
-        let sorted_params: std::collections::BTreeMap<&String, &String> =
-            params.iter().collect();
+        let sorted_params: std::collections::BTreeMap<&String, &String> = params.iter().collect();
 
         // 2. 拼接为query string
         let query_string = sorted_params
@@ -87,7 +86,9 @@ mod tests {
 
         // 验证签名格式（应该是32位小写十六进制字符串）
         assert_eq!(sign.len(), 32);
-        assert!(sign.chars().all(|c| c.is_ascii_hexdigit() && !c.is_uppercase()));
+        assert!(sign
+            .chars()
+            .all(|c| c.is_ascii_hexdigit() && !c.is_uppercase()));
 
         // 验证签名的一致性（相同输入应该产生相同输出）
         let sign2 = manager.sign_params(&params);

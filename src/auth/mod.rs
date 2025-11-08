@@ -1,7 +1,7 @@
 /*
  * @Author: SpenserCai
  * @Date: 2025-10-31 11:13:33
- * @version: 
+ * @version:
  * @LastEditors: SpenserCai
  * @LastEditTime: 2025-10-31 14:03:16
  * @Description: file content
@@ -18,8 +18,8 @@ pub mod types;
 
 pub use types::{AuthError, Credentials, LoginStatus, QRCodeData};
 
-use async_trait::async_trait;
 use crate::error::Result;
+use async_trait::async_trait;
 
 /// 认证提供者接口
 ///

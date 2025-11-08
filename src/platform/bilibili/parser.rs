@@ -1,10 +1,17 @@
+//! Bilibili parser module
+//!
+//! This module handles URL parsing and video information extraction for Bilibili.
+
 use super::api::*;
 use super::api::{BangumiInfoData, CheeseInfoData};
 use super::VideoType;
-use serde::Deserialize;
 use crate::error::{DownloaderError, Result};
-use crate::types::{Auth, Page, Stream, StreamType, Subtitle, VideoInfo};
+use crate::types::{
+    Auth, BatchResult, BatchType, Page, PageInfo, Stream, StreamType, Subtitle, VideoInfo,
+};
 use crate::utils::http::HttpClient;
+use regex::Regex;
+use serde::Deserialize;
 use std::sync::Arc;
 
 const QUALITY_MAP: &[(&str, u32)] = &[
@@ -21,53 +28,214 @@ const QUALITY_MAP: &[(&str, u32)] = &[
     ("360P 流畅", 16),
 ];
 
+/// Parse a Bilibili URL and return the video type
+pub fn parse_url(url: &str) -> Result<VideoType> {
+    // BV号: BV1xx411c7mD 或 https://www.bilibili.com/video/BV1xx411c7mD
+    let bv_regex = Regex::new(r"(BV[a-zA-Z0-9]+)").unwrap();
+    if let Some(caps) = bv_regex.captures(url) {
+        return Ok(VideoType::Bvid(caps[1].to_string()));
+    }
+
+    // av号: av170001 或 https://www.bilibili.com/video/av170001
+    let av_regex = Regex::new(r"av(\d+)").unwrap();
+    if let Some(caps) = av_regex.captures(url) {
+        return Ok(VideoType::Aid(caps[1].to_string()));
+    }
+
+    // 番剧 ep: ep123456 或 https://www.bilibili.com/bangumi/play/ep123456
+    let ep_regex = Regex::new(r"ep(\d+)").unwrap();
+    if let Some(caps) = ep_regex.captures(url) {
+        return Ok(VideoType::Episode(caps[1].to_string()));
+    }
+
+    // 番剧 ss: ss12345 或 https://www.bilibili.com/bangumi/play/ss12345
+    let ss_regex = Regex::new(r"ss(\d+)").unwrap();
+    if let Some(caps) = ss_regex.captures(url) {
+        return Ok(VideoType::Season(caps[1].to_string()));
+    }
+
+    // 课程: cheese123456 或 https://www.bilibili.com/cheese/play/ep123456
+    let cheese_regex = Regex::new(r"cheese/play/ep(\d+)").unwrap();
+    if let Some(caps) = cheese_regex.captures(url) {
+        return Ok(VideoType::Cheese(caps[1].to_string()));
+    }
+
+    // 收藏夹: favId:mid 或 https://space.bilibili.com/{mid}/favlist?fid={favId}
+    let fav_regex = Regex::new(r"space\.bilibili\.com/(\d+)/favlist\?fid=(\d+)").unwrap();
+    if let Some(caps) = fav_regex.captures(url) {
+        let mid = caps[1].to_string();
+        let fav_id = caps[2].to_string();
+        return Ok(VideoType::FavoriteList(format!("{}:{}", fav_id, mid)));
+    }
+
+    // UP主空间: mid123456 或 https://space.bilibili.com/123456
+    let space_regex = Regex::new(r"space\.bilibili\.com/(\d+)(?:/video)?$").unwrap();
+    if let Some(caps) = space_regex.captures(url) {
+        return Ok(VideoType::SpaceVideo(caps[1].to_string()));
+    }
+
+    // 合集: https://www.bilibili.com/medialist/play/ml123456
+    let media_regex = Regex::new(r"medialist/play/ml(\d+)").unwrap();
+    if let Some(caps) = media_regex.captures(url) {
+        return Ok(VideoType::MediaList(caps[1].to_string()));
+    }
+
+    // 系列: https://space.bilibili.com/{mid}/channel/seriesdetail?sid={sid}
+    let series_regex =
+        Regex::new(r"space\.bilibili\.com/(\d+)/channel/seriesdetail\?sid=(\d+)").unwrap();
+    if let Some(caps) = series_regex.captures(url) {
+        let mid = caps[1].to_string();
+        let sid = caps[2].to_string();
+        return Ok(VideoType::SeriesList(format!("{}:{}", mid, sid)));
+    }
+
+    Err(DownloaderError::InvalidUrl(format!(
+        "Cannot parse bilibili URL: {}",
+        url
+    )))
+}
+
+/// Check if a video type is a batch type (playlist, favorites, etc.)
+pub fn is_batch_type(video_type: &VideoType) -> bool {
+    matches!(
+        video_type,
+        VideoType::FavoriteList(_)
+            | VideoType::SpaceVideo(_)
+            | VideoType::MediaList(_)
+            | VideoType::SeriesList(_)
+    )
+}
+
+/// Parse video information (single video only)
+/// For batch URLs, this will return an error or only the first video
 pub async fn parse_video_info(
     client: &Arc<HttpClient>,
     video_type: VideoType,
     auth: Option<&Auth>,
-    wbi_manager: Option<&mut super::wbi::WbiManager>,
-) -> Result<super::ParseResult> {
+    _wbi_manager: Option<&mut super::wbi::WbiManager>,
+) -> Result<VideoInfo> {
     match video_type {
-        VideoType::Bvid(bvid) => {
-            let video = fetch_video_info_by_bvid(client, &bvid, auth).await?;
-            Ok(super::ParseResult::Single(Box::new(video)))
-        }
-        VideoType::Aid(aid) => {
-            let video = fetch_video_info_by_aid(client, &aid, auth).await?;
-            Ok(super::ParseResult::Single(Box::new(video)))
-        }
-        VideoType::Episode(ep) => {
-            let video = fetch_bangumi_info_by_ep(client, &ep, auth).await?;
-            Ok(super::ParseResult::Single(Box::new(video)))
-        }
-        VideoType::Season(ss) => {
-            let video = fetch_bangumi_info_by_ss(client, &ss, auth).await?;
-            Ok(super::ParseResult::Single(Box::new(video)))
-        }
-        VideoType::Cheese(ep) => {
-            let video = fetch_cheese_info(client, &ep, auth).await?;
-            Ok(super::ParseResult::Single(Box::new(video)))
-        }
+        VideoType::Bvid(bvid) => fetch_video_info_by_bvid(client, &bvid, auth).await,
+        VideoType::Aid(aid) => fetch_video_info_by_aid(client, &aid, auth).await,
+        VideoType::Episode(ep) => fetch_bangumi_info_by_ep(client, &ep, auth).await,
+        VideoType::Season(ss) => fetch_bangumi_info_by_ss(client, &ss, auth).await,
+        VideoType::Cheese(ep) => fetch_cheese_info(client, &ep, auth).await,
+        VideoType::FavoriteList(_)
+        | VideoType::SpaceVideo(_)
+        | VideoType::MediaList(_)
+        | VideoType::SeriesList(_) => Err(DownloaderError::Parse(
+            "This is a batch URL. Use parse_batch_videos instead.".to_string(),
+        )),
+    }
+}
+
+/// Parse batch videos (playlists, favorites, etc.)
+pub async fn parse_batch_videos(
+    client: &Arc<HttpClient>,
+    video_type: VideoType,
+    auth: Option<&Auth>,
+    wbi_manager: Option<&mut super::wbi::WbiManager>,
+    api_mode: super::ApiMode,
+) -> Result<BatchResult> {
+    match video_type {
         VideoType::FavoriteList(fav_info) => {
             let videos = fetch_favorite_list(client, &fav_info, auth).await?;
-            Ok(super::ParseResult::Batch(videos))
+            let count = videos.len();
+            Ok(BatchResult {
+                videos,
+                total_count: Some(count),
+                has_more: false,
+                continuation: None,
+                batch_type: Some(BatchType::Favorites),
+                page_info: Some(PageInfo {
+                    current_page: 1,
+                    page_size: count,
+                    total_pages: Some(1),
+                }),
+            })
         }
         VideoType::SpaceVideo(mid) => {
-            let wbi = wbi_manager.ok_or_else(|| {
-                DownloaderError::Api("WBI manager required for space video".to_string())
-            })?;
-            let videos = fetch_space_videos(client, &mid, auth, wbi).await?;
-            Ok(super::ParseResult::Batch(videos))
+            // TV/APP mode uses different API endpoint (no WBI signature required)
+            let videos = if api_mode == super::ApiMode::TV || api_mode == super::ApiMode::App {
+                fetch_space_videos_app(client, &mid, auth).await?
+            } else {
+                // Web mode uses WBI signature
+                let wbi = wbi_manager.ok_or_else(|| {
+                    DownloaderError::Api("WBI manager required for space video in Web mode".to_string())
+                })?;
+                fetch_space_videos(client, &mid, auth, wbi).await?
+            };
+            
+            let count = videos.len();
+            Ok(BatchResult {
+                videos,
+                total_count: Some(count),
+                has_more: false,
+                continuation: None,
+                batch_type: Some(BatchType::UserVideos),
+                page_info: Some(PageInfo {
+                    current_page: 1,
+                    page_size: count,
+                    total_pages: Some(1),
+                }),
+            })
         }
         VideoType::MediaList(media_id) => {
             let videos = fetch_media_list(client, &media_id, auth).await?;
-            Ok(super::ParseResult::Batch(videos))
+            let count = videos.len();
+            Ok(BatchResult {
+                videos,
+                total_count: Some(count),
+                has_more: false,
+                continuation: None,
+                batch_type: Some(BatchType::Collection),
+                page_info: Some(PageInfo {
+                    current_page: 1,
+                    page_size: count,
+                    total_pages: Some(1),
+                }),
+            })
         }
         VideoType::SeriesList(series_info) => {
             let videos = fetch_series_list(client, &series_info, auth).await?;
-            Ok(super::ParseResult::Batch(videos))
+            let count = videos.len();
+            Ok(BatchResult {
+                videos,
+                total_count: Some(count),
+                has_more: false,
+                continuation: None,
+                batch_type: Some(BatchType::Series),
+                page_info: Some(PageInfo {
+                    current_page: 1,
+                    page_size: count,
+                    total_pages: Some(1),
+                }),
+            })
+        }
+        _ => {
+            // Single video - wrap in BatchResult
+            let video = parse_video_info(client, video_type, auth, wbi_manager).await?;
+            Ok(BatchResult::single(video))
         }
     }
+}
+
+/// Parse batch page (for pagination support)
+/// Currently, Bilibili batch downloads don't support pagination in this implementation
+pub async fn parse_batch_page(
+    client: &Arc<HttpClient>,
+    video_type: VideoType,
+    continuation: Option<&str>,
+    api_mode: super::ApiMode,
+    auth: Option<&Auth>,
+    wbi_manager: Option<&mut super::wbi::WbiManager>,
+) -> Result<BatchResult> {
+    if continuation.is_some() {
+        return Err(DownloaderError::Parse(
+            "Bilibili batch downloads don't support pagination yet".to_string(),
+        ));
+    }
+    parse_batch_videos(client, video_type, auth, wbi_manager, api_mode).await
 }
 
 async fn fetch_video_info_by_bvid(
@@ -157,6 +325,7 @@ fn convert_to_video_info(data: VideoInfoData) -> Result<VideoInfo> {
         pages,
         is_bangumi: false,
         ep_id: None,
+        extra_data: None,
     })
 }
 
@@ -189,7 +358,7 @@ pub async fn get_play_url_with_mode_and_ep(
     ep_id: Option<&str>,
 ) -> Result<Vec<Stream>> {
     let is_bangumi = ep_id.is_some();
-    
+
     let api = match api_mode {
         super::ApiMode::Web => {
             if is_bangumi {
@@ -242,8 +411,10 @@ pub async fn get_play_url_with_mode_and_ep(
 
     // 番剧API返回result字段，普通视频返回data字段
     let data = if is_bangumi {
-        let api_response: super::api::BangumiApiResponse<super::api::BangumiPlayUrlResult> = serde_json::from_str(&json_text)
-            .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi play URL: {}", e)))?;
+        let api_response: super::api::BangumiApiResponse<super::api::BangumiPlayUrlResult> =
+            serde_json::from_str(&json_text).map_err(|e| {
+                DownloaderError::Parse(format!("Failed to parse bangumi play URL: {}", e))
+            })?;
 
         if api_response.code != 0 {
             return Err(DownloaderError::Api(format!(
@@ -288,6 +459,7 @@ pub async fn get_play_url_with_mode_and_ep(
                 url: video.base_url.clone(),
                 size: 0, // Size not provided in API
                 bandwidth: video.bandwidth,
+                extra_data: None,
             });
         }
 
@@ -312,6 +484,7 @@ pub async fn get_play_url_with_mode_and_ep(
                 url: audio.base_url.clone(),
                 size: 0,
                 bandwidth: audio.bandwidth,
+                extra_data: None,
             });
         }
 
@@ -336,6 +509,7 @@ pub async fn get_play_url_with_mode_and_ep(
                         url: audio.base_url.clone(),
                         size: 0,
                         bandwidth: audio.bandwidth,
+                        extra_data: None,
                     });
                 }
             }
@@ -361,6 +535,7 @@ pub async fn get_play_url_with_mode_and_ep(
                     url: flac_audio.base_url.clone(),
                     size: 0,
                     bandwidth: flac_audio.bandwidth,
+                    extra_data: None,
                 });
             }
         }
@@ -452,14 +627,18 @@ async fn fetch_bangumi_info_by_ep(
     ep_id: &str,
     auth: Option<&Auth>,
 ) -> Result<VideoInfo> {
-    let api = format!("https://api.bilibili.com/pgc/view/web/season?ep_id={}", ep_id);
+    let api = format!(
+        "https://api.bilibili.com/pgc/view/web/season?ep_id={}",
+        ep_id
+    );
     let response = client.get_with_auth(&api, auth).await?;
     let json_text = response.text().await?;
 
     tracing::debug!("Bangumi info response: {}", json_text);
 
-    let api_response: super::api::BangumiApiResponse<BangumiInfoData> = serde_json::from_str(&json_text)
-        .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi info: {}", e)))?;
+    let api_response: super::api::BangumiApiResponse<BangumiInfoData> =
+        serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi info: {}", e)))?;
 
     if api_response.code != 0 {
         return Err(DownloaderError::Api(format!(
@@ -481,14 +660,18 @@ async fn fetch_bangumi_info_by_ss(
     season_id: &str,
     auth: Option<&Auth>,
 ) -> Result<VideoInfo> {
-    let api = format!("https://api.bilibili.com/pgc/view/web/season?season_id={}", season_id);
+    let api = format!(
+        "https://api.bilibili.com/pgc/view/web/season?season_id={}",
+        season_id
+    );
     let response = client.get_with_auth(&api, auth).await?;
     let json_text = response.text().await?;
 
     tracing::debug!("Bangumi info response: {}", json_text);
 
-    let api_response: super::api::BangumiApiResponse<BangumiInfoData> = serde_json::from_str(&json_text)
-        .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi info: {}", e)))?;
+    let api_response: super::api::BangumiApiResponse<BangumiInfoData> =
+        serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse bangumi info: {}", e)))?;
 
     if api_response.code != 0 {
         return Err(DownloaderError::Api(format!(
@@ -511,7 +694,11 @@ fn convert_bangumi_to_video_info(data: BangumiInfoData, target_ep_id: &str) -> R
     // 如果主episodes为空或不包含目标ep，检查section
     if !target_ep_id.is_empty() && !episodes.iter().any(|ep| ep.id.to_string() == target_ep_id) {
         for section in &data.section {
-            if section.episodes.iter().any(|ep| ep.id.to_string() == target_ep_id) {
+            if section
+                .episodes
+                .iter()
+                .any(|ep| ep.id.to_string() == target_ep_id)
+            {
                 title = format!("{}[{}]", title, section.title);
                 episodes = section.episodes.clone();
                 break;
@@ -529,7 +716,9 @@ fn convert_bangumi_to_video_info(data: BangumiInfoData, target_ep_id: &str) -> R
             continue;
         }
 
-        let ep_title = format!("{} {}", episode.title, episode.long_title).trim().to_string();
+        let ep_title = format!("{} {}", episode.title, episode.long_title)
+            .trim()
+            .to_string();
         let current_ep_id = episode.id.to_string();
 
         // 保存第一个episode的ep_id
@@ -569,6 +758,7 @@ fn convert_bangumi_to_video_info(data: BangumiInfoData, target_ep_id: &str) -> R
         pages,
         is_bangumi: true,
         ep_id: ep_id_for_first_page,
+        extra_data: None,
     })
 }
 
@@ -578,7 +768,10 @@ async fn fetch_cheese_info(
     ep_id: &str,
     auth: Option<&Auth>,
 ) -> Result<VideoInfo> {
-    let api = format!("https://api.bilibili.com/pugv/view/web/season?ep_id={}", ep_id);
+    let api = format!(
+        "https://api.bilibili.com/pugv/view/web/season?ep_id={}",
+        ep_id
+    );
     let response = client.get_with_auth(&api, auth).await?;
     let json_text = response.text().await?;
 
@@ -633,6 +826,7 @@ fn convert_cheese_to_video_info(data: CheeseInfoData) -> Result<VideoInfo> {
         pages,
         is_bangumi: true, // 课程也算番剧类型
         ep_id: None,
+        extra_data: None,
     })
 }
 
@@ -720,7 +914,8 @@ pub async fn fetch_favorite_list(
 
             if media.page > 1 {
                 // 多P视频，需要获取详细信息
-                let video_info = fetch_video_info_by_aid(client, &media.id.to_string(), auth).await?;
+                let video_info =
+                    fetch_video_info_by_aid(client, &media.id.to_string(), auth).await?;
                 all_videos.push(video_info);
             } else {
                 // 单P视频
@@ -738,12 +933,17 @@ pub async fn fetch_favorite_list(
                     pages: vec![Page {
                         number: 1,
                         title,
-                        cid: media.ugc.as_ref().map(|u| u.first_cid.to_string()).unwrap_or_default(),
+                        cid: media
+                            .ugc
+                            .as_ref()
+                            .map(|u| u.first_cid.to_string())
+                            .unwrap_or_default(),
                         duration: media.duration,
                         ep_id: None,
                     }],
                     is_bangumi: false,
                     ep_id: None,
+                    extra_data: None,
                 };
                 all_videos.push(video_info);
             }
@@ -770,7 +970,8 @@ pub async fn fetch_favorite_list(
                     }
 
                     if media.page > 1 {
-                        let video_info = fetch_video_info_by_aid(client, &media.id.to_string(), auth).await?;
+                        let video_info =
+                            fetch_video_info_by_aid(client, &media.id.to_string(), auth).await?;
                         all_videos.push(video_info);
                     } else {
                         let title = media.title.clone();
@@ -787,12 +988,17 @@ pub async fn fetch_favorite_list(
                             pages: vec![Page {
                                 number: 1,
                                 title,
-                                cid: media.ugc.as_ref().map(|u| u.first_cid.to_string()).unwrap_or_default(),
+                                cid: media
+                                    .ugc
+                                    .as_ref()
+                                    .map(|u| u.first_cid.to_string())
+                                    .unwrap_or_default(),
                                 duration: media.duration,
                                 ep_id: None,
                             }],
                             is_bangumi: false,
                             ep_id: None,
+                            extra_data: None,
                         };
                         all_videos.push(video_info);
                     }
@@ -812,7 +1018,10 @@ pub async fn fetch_space_videos(
     wbi_manager: &mut super::wbi::WbiManager,
 ) -> Result<Vec<VideoInfo>> {
     // 获取用户信息
-    let user_info_api = format!("https://api.live.bilibili.com/live_user/v1/Master/info?uid={}", mid);
+    let user_info_api = format!(
+        "https://api.live.bilibili.com/live_user/v1/Master/info?uid={}",
+        mid
+    );
     let response = client.get(&user_info_api, None).await?;
     let json_text = response.text().await?;
 
@@ -830,8 +1039,11 @@ pub async fn fetch_space_videos(
     // 获取第一页 - 使用WBI签名
     let base_params = format!("mid={}&order=pubdate&pn=1&ps={}&tid=0", mid, page_size);
     let signed_params = wbi_manager.sign_url(&base_params).await?;
-    let api = format!("https://api.bilibili.com/x/space/wbi/arc/search?{}", signed_params);
-    
+    let api = format!(
+        "https://api.bilibili.com/x/space/wbi/arc/search?{}",
+        signed_params
+    );
+
     let response = client.get_with_auth(&api, auth).await?;
     let json_text = response.text().await?;
 
@@ -852,7 +1064,9 @@ pub async fn fetch_space_videos(
         .ok_or_else(|| DownloaderError::Parse("No space video data".to_string()))?;
 
     let page_info = data.page.ok_or_else(|| {
-        DownloaderError::Parse("No page info in response (may need authentication or WBI signature)".to_string())
+        DownloaderError::Parse(
+            "No page info in response (may need authentication or WBI signature)".to_string(),
+        )
     })?;
 
     let total_count = page_info.count;
@@ -866,15 +1080,23 @@ pub async fn fetch_space_videos(
             all_videos.push(video_info);
         }
     } else {
-        return Err(DownloaderError::Parse("No video list in response".to_string()));
+        return Err(DownloaderError::Parse(
+            "No video list in response".to_string(),
+        ));
     }
 
     // 获取剩余页面
     for page in 2..=total_pages {
-        let base_params = format!("mid={}&order=pubdate&pn={}&ps={}&tid=0", mid, page, page_size);
+        let base_params = format!(
+            "mid={}&order=pubdate&pn={}&ps={}&tid=0",
+            mid, page, page_size
+        );
         let signed_params = wbi_manager.sign_url(&base_params).await?;
-        let api = format!("https://api.bilibili.com/x/space/wbi/arc/search?{}", signed_params);
-        
+        let api = format!(
+            "https://api.bilibili.com/x/space/wbi/arc/search?{}",
+            signed_params
+        );
+
         let response = client.get_with_auth(&api, auth).await?;
         let json_text = response.text().await?;
 
@@ -884,10 +1106,112 @@ pub async fn fetch_space_videos(
         if let Some(data) = api_response.data {
             if let Some(list) = data.list {
                 for item in list.vlist {
-                    let video_info = fetch_video_info_by_aid(client, &item.aid.to_string(), auth).await?;
+                    let video_info =
+                        fetch_video_info_by_aid(client, &item.aid.to_string(), auth).await?;
                     all_videos.push(video_info);
                 }
             }
+        }
+    }
+
+    Ok(all_videos)
+}
+
+// UP主空间视频获取（APP端，无需WBI签名）
+pub async fn fetch_space_videos_app(
+    client: &Arc<HttpClient>,
+    mid: &str,
+    auth: Option<&Auth>,
+) -> Result<Vec<VideoInfo>> {
+    // 获取用户信息
+    let user_info_api = format!(
+        "https://api.live.bilibili.com/live_user/v1/Master/info?uid={}",
+        mid
+    );
+    let response = client.get(&user_info_api, None).await?;
+    let json_text = response.text().await?;
+
+    let user_response: ApiResponse<UserInfoData> = serde_json::from_str(&json_text)
+        .map_err(|e| DownloaderError::Parse(format!("Failed to parse user info: {}", e)))?;
+
+    let _user_name = user_response
+        .data
+        .map(|d| d.info.uname)
+        .unwrap_or_else(|| format!("User_{}", mid));
+
+    let mut all_videos = Vec::new();
+    let mut last_aid: Option<u64> = None;
+    let page_size = 20; // APP端默认每页20条
+
+    loop {
+        // 构建APP端API URL
+        let mut api = format!(
+            "https://app.biliapi.com/x/v2/space/archive/cursor?vmid={}&ps={}",
+            mid, page_size
+        );
+        
+        if let Some(aid) = last_aid {
+            api.push_str(&format!("&aid={}", aid));
+        }
+
+        let response = client.get_with_auth(&api, auth).await?;
+        let json_text = response.text().await?;
+
+        tracing::debug!("APP space video response: {}", json_text);
+
+        // 解析APP端响应
+        #[derive(Deserialize)]
+        struct AppSpaceResponse {
+            code: i32,
+            message: String,
+            data: Option<AppSpaceData>,
+        }
+
+        #[derive(Deserialize)]
+        struct AppSpaceData {
+            has_next: bool,
+            item: Vec<AppSpaceItem>,
+        }
+
+        #[derive(Deserialize)]
+        struct AppSpaceItem {
+            bvid: String,
+        }
+
+        let api_response: AppSpaceResponse = serde_json::from_str(&json_text)
+            .map_err(|e| DownloaderError::Parse(format!("Failed to parse APP space videos: {}", e)))?;
+
+        if api_response.code != 0 {
+            return Err(DownloaderError::Api(format!(
+                "API error: {}",
+                api_response.message
+            )));
+        }
+
+        let data = api_response
+            .data
+            .ok_or_else(|| DownloaderError::Parse("No space video data".to_string()))?;
+
+        if data.item.is_empty() {
+            break;
+        }
+
+        // 获取每个视频的详细信息
+        for item in &data.item {
+            let video_info = fetch_video_info_by_bvid(client, &item.bvid, auth).await?;
+            all_videos.push(video_info);
+        }
+
+        // 检查是否有下一页
+        if !data.has_next {
+            break;
+        }
+
+        // 更新last_aid为当前页最后一个视频的aid
+        if let Some(last_video) = all_videos.last() {
+            last_aid = Some(last_video.aid);
+        } else {
+            break;
         }
     }
 

@@ -77,6 +77,7 @@ impl CredentialStorage {
         Auth {
             cookie: credentials.cookie.clone(),
             access_token: credentials.access_token.clone(),
+            extra: std::collections::HashMap::new(),
         }
     }
 

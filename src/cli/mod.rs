@@ -8,8 +8,8 @@ use std::path::PathBuf;
 #[command(about = "A modular video downloader written in Rust", long_about = None)]
 pub struct Cli {
     /// Video URL to download (supports bilibili BV/av/ep/ss)
-    /// Optional when using --login-qrcode or --login-tv
-    #[arg(required_unless_present_any = ["login_qrcode", "login_tv"])]
+    /// Optional when using login flags
+    #[arg(required_unless_present_any = ["login_qrcode", "login_bilibili_web", "login_bilibili_tv"])]
     pub url: Option<String>,
 
     /// Quality priority (comma-separated, e.g., "1080P,720P,480P")
@@ -92,13 +92,17 @@ pub struct Cli {
     #[arg(long, default_value = "ass")]
     pub danmaku_format: String,
 
-    /// Login using QR code (Web mode)
-    #[arg(long, conflicts_with = "login_tv")]
+    /// Login using QR code (generic, platform will be auto-detected from URL)
+    #[arg(long, conflicts_with_all = ["login_bilibili_web", "login_bilibili_tv"])]
     pub login_qrcode: bool,
 
-    /// Login using QR code (TV mode, gets access_token)
-    #[arg(long, conflicts_with = "login_qrcode")]
-    pub login_tv: bool,
+    /// Login to Bilibili using QR code (Web mode)
+    #[arg(long, conflicts_with_all = ["login_qrcode", "login_bilibili_tv"])]
+    pub login_bilibili_web: bool,
+
+    /// Login to Bilibili using QR code (TV mode, gets access_token)
+    #[arg(long, conflicts_with_all = ["login_qrcode", "login_bilibili_web"])]
+    pub login_bilibili_tv: bool,
 
     /// Use aria2c for downloading (faster for large files)
     #[arg(long)]
@@ -115,6 +119,18 @@ pub struct Cli {
     /// Use MP4Box for muxing (recommended for Dolby Vision with FFmpeg < 5.0)
     #[arg(long)]
     pub use_mp4box: bool,
+
+    /// Maximum number of videos to download in batch mode (safety limit, will error if exceeded)
+    #[arg(long)]
+    pub batch_limit: Option<usize>,
+
+    /// Maximum number of videos to download (will truncate to first N videos)
+    #[arg(long)]
+    pub max_videos: Option<usize>,
+
+    /// Custom User-Agent string (default: random)
+    #[arg(long)]
+    pub user_agent: Option<String>,
 }
 
 impl Cli {
@@ -177,7 +193,7 @@ impl Cli {
 
     pub fn get_api_mode(&self) -> crate::platform::bilibili::ApiMode {
         use crate::platform::bilibili::ApiMode;
-        
+
         if self.use_tv_api {
             ApiMode::TV
         } else if self.use_app_api {
@@ -191,7 +207,7 @@ impl Cli {
 
     pub fn get_danmaku_format(&self) -> crate::core::danmaku::DanmakuFormat {
         use crate::core::danmaku::DanmakuFormat;
-        
+
         match self.danmaku_format.to_lowercase().as_str() {
             "xml" => DanmakuFormat::Xml,
             "ass" => DanmakuFormat::Ass,
@@ -201,20 +217,47 @@ impl Cli {
 
     /// Check if login is requested
     pub fn needs_login(&self) -> bool {
-        self.login_qrcode || self.login_tv
+        self.login_qrcode || self.login_bilibili_web || self.login_bilibili_tv
     }
 
-    /// Get the API mode for login (if login is requested)
-    pub fn get_login_api_mode(&self) -> Option<crate::platform::bilibili::ApiMode> {
-        use crate::platform::bilibili::ApiMode;
-        
-        if self.login_tv {
-            Some(ApiMode::TV)
+    /// Get the platform for login (if login is requested)
+    /// Returns None for generic --login-qrcode (platform will be auto-detected)
+    pub fn get_login_platform(&self) -> Option<&str> {
+        if self.login_bilibili_web || self.login_bilibili_tv {
+            Some("bilibili")
+        } else {
+            None // Generic login, platform will be detected from URL
+        }
+    }
+
+    /// Get the Bilibili login mode
+    pub fn get_bilibili_login_mode(&self) -> Option<BilibiliLoginMode> {
+        if self.login_bilibili_tv {
+            Some(BilibiliLoginMode::TV)
+        } else if self.login_bilibili_web {
+            Some(BilibiliLoginMode::Web)
         } else if self.login_qrcode {
-            Some(ApiMode::Web)
+            // Generic QR code defaults to Web mode for Bilibili
+            Some(BilibiliLoginMode::Web)
         } else {
             None
         }
     }
 
+    /// Check for deprecated login arguments and show warnings
+    pub fn check_deprecated_login_args(&self) {
+        if self.login_qrcode {
+            tracing::warn!(
+                "Using generic --login-qrcode flag. \
+                Consider using platform-specific flags like --login-bilibili-web or --login-bilibili-tv for clarity."
+            );
+        }
+    }
+}
+
+/// Bilibili specific login modes
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BilibiliLoginMode {
+    Web,
+    TV,
 }

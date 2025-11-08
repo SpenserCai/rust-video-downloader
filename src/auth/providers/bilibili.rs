@@ -187,7 +187,13 @@ impl BilibiliAuthProvider {
         }
 
         // 按固定顺序提取需要的Cookie
-        let required_cookies = ["SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid"];
+        let required_cookies = [
+            "SESSDATA",
+            "bili_jct",
+            "DedeUserID",
+            "DedeUserID__ckMd5",
+            "sid",
+        ];
         let mut cookie_parts = Vec::new();
 
         for cookie_name in &required_cookies {
@@ -199,10 +205,7 @@ impl BilibiliAuthProvider {
         // 拼接为字符串，格式：name1=value1; name2=value2
         let cookies = cookie_parts.join("; ");
 
-        tracing::debug!(
-            "Extracted {} cookies from response",
-            cookie_parts.len()
-        );
+        tracing::debug!("Extracted {} cookies from response", cookie_parts.len());
 
         Ok(cookies)
     }
@@ -413,16 +416,21 @@ impl BilibiliAuthProvider {
 
         let mut cookie_map: HashMap<String, String> = HashMap::new();
         for cookie_obj in cookies_array {
-            if let (Some(name), Some(value)) = (
-                cookie_obj["name"].as_str(),
-                cookie_obj["value"].as_str(),
-            ) {
+            if let (Some(name), Some(value)) =
+                (cookie_obj["name"].as_str(), cookie_obj["value"].as_str())
+            {
                 cookie_map.insert(name.to_string(), value.to_string());
             }
         }
 
         // 按固定顺序提取需要的Cookie
-        let required_cookies = ["SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid"];
+        let required_cookies = [
+            "SESSDATA",
+            "bili_jct",
+            "DedeUserID",
+            "DedeUserID__ckMd5",
+            "sid",
+        ];
         let mut cookie_parts = Vec::new();
 
         for cookie_name in &required_cookies {

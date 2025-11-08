@@ -3,7 +3,7 @@
  * @Date: 2025-10-31 16:00:00
  * @version:
  * @LastEditors: SpenserCai
- * @LastEditTime: 2025-10-31 16:00:00
+ * @LastEditTime: 2025-11-07 18:17:15
  * @Description: Login manager module
  */
 //! 登录管理器模块
@@ -69,9 +69,7 @@ impl LoginManager {
         // 步骤4: 轮询登录状态
         tracing::info!("等待扫码...");
 
-        let credentials = self
-            .poll_with_retry(&qr_data.key, 180)
-            .await?;
+        let credentials = self.poll_with_retry(&qr_data.key, 180).await?;
 
         // 步骤5: 清理资源
         if qrcode_path.exists() {
@@ -131,7 +129,12 @@ impl LoginManager {
                 }
                 Err(e) => {
                     // 网络错误或其他错误
-                    tracing::warn!("轮询登录状态失败 (尝试 {}/{}): {}", attempt, max_attempts, e);
+                    tracing::warn!(
+                        "轮询登录状态失败 (尝试 {}/{}): {}",
+                        attempt,
+                        max_attempts,
+                        e
+                    );
 
                     // 如果是网络错误，重试几次
                     if attempt < 3 {

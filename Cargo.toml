@@ -1,6 +1,6 @@
 [package]
 name = "rvd"
-version = "0.2.7"
+version = "1.0.0"
 edition = "2021"
 authors = ["RVD Contributors"]
 description = "A modular video downloader written in Rust"
@@ -13,13 +13,17 @@ readme = "README.md"
 name = "rvd"
 path = "src/lib.rs"
 
+[[bin]]
+name = "rvd"
+path = "src/main.rs"
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
 
 # HTTP client
 # Use rustls-tls for better static compilation support (especially for musl)
-reqwest = { version = "0.11", features = ["json", "cookies", "stream", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = ["json", "cookies", "stream", "rustls-tls"], default-features = false }
 
 # Command line parsing
 clap = { version = "4.4", features = ["derive"] }
@@ -29,14 +33,14 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Configuration
-toml = "0.8"
+toml = "0.9"
 
 # Error handling
-thiserror = "1.0"
+thiserror = "2.0"
 anyhow = "1.0"
 
 # Progress bar
-indicatif = "0.17"
+indicatif = "0.18"
 
 # Logging
 tracing = "0.1"
@@ -44,6 +48,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Regex
 regex = "1.10"
+
+# Random number generation
+rand = "0.9"
 
 # Compression (for manual gzip decompression if needed)
 flate2 = "1.0"
@@ -58,13 +65,13 @@ url = "2.5"
 futures = "0.3"
 
 # Directory utilities
-dirs = "5.0"
+dirs = "6.0"
 
 # Interactive prompts
-dialoguer = "0.11"
+dialoguer = "0.12"
 
 # Cryptography
-md5 = "0.7"
+md5 = "0.8"
 
 # XML processing
 quick-xml = "0.31"
