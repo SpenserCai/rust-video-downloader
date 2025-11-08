@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 完整的文档体系（README、用户指南、开发指南、配置文档、迁移指南）
 - 架构设计文档，详细说明模块化设计和扩展机制
 
-## [1.0.0] - 2024-XX-XX
+## [1.0.0] - 2025-11-08
 
 ### Added - 核心架构
 
@@ -200,15 +200,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 贡献者
 
 感谢所有为 RVD Next 做出贡献的开发者！
-
-## 参考项目
-
-本项目参考了以下优秀项目的设计：
-
-- [BBDown](https://github.com/nilaoda/BBDown) - 哔哩哔哩下载器
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube 下载器
-- [lux](https://github.com/iawia002/lux) - Go 语言视频下载器
-- [bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect) - 哔哩哔哩 API 文档
 
 ---
 
